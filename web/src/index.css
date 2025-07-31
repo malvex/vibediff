@@ -1,0 +1,224 @@
+@import "tailwindcss";
+
+/* Define custom variant for dark mode */
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
+  --color-scheme: light dark;
+
+  /* Custom CSS properties to match original design */
+  --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Consolas, "Liberation Mono", Menlo, monospace;
+  --line-height-code: 20px;
+  --size-line-number: 50px;
+  --color-hunk-bg: rgba(64, 158, 255, 0.1);
+  --color-hunk-text: rgba(27,31,35,.7);
+  --color-hunk-bg-dark: rgba(56, 139, 253, 0.15);
+  --color-hunk-text-dark: #8b949e;
+}
+
+/* Base styles */
+* {
+  box-sizing: border-box;
+}
+
+body {
+  @apply bg-white dark:bg-[#0d1117] text-[#24292e] dark:text-[#c9d1d9];
+  margin: 0;
+  padding: 0;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+/* Ensure Prism doesn't override our styles */
+pre[class*="language-"],
+code[class*="language-"] {
+  background: transparent !important;
+  margin: 0;
+  padding: 0;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  line-height: var(--line-height-code);
+}
+
+/* Table styles */
+.diff-table,
+.split-diff-table {
+  border-collapse: collapse;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  line-height: var(--line-height-code);
+}
+
+.diff-table td,
+.split-diff-table td {
+  padding: 0;
+  height: 20px;
+  vertical-align: top;
+  font-family: inherit;
+  font-size: inherit;
+  line-height: inherit;
+}
+
+/* Custom styles that can't be done with Tailwind */
+/* Line numbers */
+.line-num {
+  color: rgba(27, 31, 35, .3);
+}
+
+.dark .line-num {
+  color: rgba(139, 148, 158, .4);
+}
+
+.line-num-addition {
+  background-color: rgba(46, 160, 67, 0.15) !important;
+  color: rgba(46, 160, 67, 1) !important;
+}
+
+.dark .line-num-addition {
+  background-color: rgba(46, 160, 67, 0.1) !important;
+  color: #3fb950 !important;
+}
+
+.line-num-deletion {
+  background-color: rgba(248, 81, 73, 0.15) !important;
+  color: rgba(248, 81, 73, 1) !important;
+}
+
+.dark .line-num-deletion {
+  background-color: rgba(248, 81, 73, 0.1) !important;
+  color: #f85149 !important;
+}
+
+/* Diff line backgrounds */
+.line-addition {
+  background-color: #e6ffed;
+}
+
+.dark .line-addition {
+  background-color: #1f362d;
+}
+
+.line-deletion {
+  background-color: #ffeef0;
+}
+
+.dark .line-deletion {
+  background-color: #3d1e20;
+}
+
+/* Code line backgrounds */
+.line-code-addition {
+  background-color: #e6ffed;
+}
+
+.dark .line-code-addition {
+  background-color: #1f362d;
+}
+
+.line-code-deletion {
+  background-color: #ffeef0;
+}
+
+.dark .line-code-deletion {
+  background-color: #3d1e20;
+}
+
+/* Diff prefix indicators */
+.line-code[data-prefix]:before {
+  content: attr(data-prefix);
+  position: absolute;
+  left: 10px;
+  top: 0;
+  color: rgba(27,31,35,.7);
+  user-select: none;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  line-height: var(--line-height-code);
+}
+
+.line-code-addition[data-prefix]:before {
+  color: #28a745;
+}
+
+.line-code-deletion[data-prefix]:before {
+  color: #d73a49;
+}
+
+/* Ensure code content has proper padding */
+.line-code {
+  position: relative;
+}
+
+.line-code code[class*="language-"] {
+  display: inline-block;
+  padding-left: 20px !important;
+  background: none;
+  white-space: pre !important;
+}
+
+/* Preserve whitespace in all Prism elements */
+.line-code pre,
+.line-code code,
+.line-code span {
+  white-space: inherit !important;
+  tab-size: 4;
+}
+
+/* Override for wrapped lines */
+.line-code.whitespace-pre-wrap code,
+.line-code.whitespace-pre-wrap span {
+  white-space: pre-wrap !important;
+  word-break: break-all !important;
+}
+
+/* Split view adjustments */
+.split-view-active {
+  max-width: 100% !important;
+}
+
+.split-view-active > div:last-child {
+  max-width: 100% !important;
+  padding: 0 16px;
+}
+
+/* Dark mode overrides for CSS variables */
+.dark {
+  --color-hunk-bg: var(--color-hunk-bg-dark);
+  --color-hunk-text: var(--color-hunk-text-dark);
+}
+
+/* Hover effect for diff lines */
+.diff-line:hover td.line-code {
+  background-color: rgba(0, 0, 0, 0.02);
+}
+
+.dark .diff-line:hover td.line-code {
+  background-color: rgba(255, 255, 255, 0.03);
+}
+
+/* Line number hover */
+.diff-line:hover td.line-num {
+  color: rgba(27,31,35,.6);
+}
+
+.dark .diff-line:hover td.line-num {
+  color: rgba(139,148,158,.6);
+}
+
+/* Split view table styles */
+.split-diff-table {
+  width: 100%;
+}
+
+/* Line number columns */
+.split-diff-table td.line-num {
+  width: 50px;
+  min-width: 50px;
+  max-width: 50px;
+}
+
+/* Code columns */
+.split-diff-table td.line-code {
+  width: 50%;
+}

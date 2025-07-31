@@ -1,0 +1,21 @@
+# Binaries
+vibediff
+vibediff-*
+*.exe
+*.dll
+*.so
+*.dylib
+
+# IDE files
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# React build output
+web/dist/

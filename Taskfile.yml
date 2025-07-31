@@ -1,0 +1,89 @@
+version: '3'
+
+vars:
+  VERSION:
+    sh: echo ${VERSION:-dev}
+  COMMIT:
+    sh: git rev-parse --short HEAD 2>/dev/null || echo "unknown"
+  BUILD_DATE:
+    sh: date -u +"%Y-%m-%dT%H:%M:%SZ"
+  LDFLAGS: -X main.Version={{.VERSION}} -X main.CommitSHA={{.COMMIT}} -X main.BuildDate={{.BUILD_DATE}}
+
+tasks:
+  default:
+    desc: Show available tasks
+    silent: true
+    cmds:
+      - task --list
+
+  run:
+    desc: Run the VibeDiff server
+    cmds:
+      - go run main.go
+
+  build:
+    desc: Build the VibeDiff binary with embedded web assets
+    deps: [build-web]
+    cmds:
+      - go build -ldflags "{{.LDFLAGS}}" -o vibediff .
+    env:
+      CGO_ENABLED: 0
+
+  build-web:
+    desc: Build the React web application
+    dir: web
+    cmds:
+      - npm run build
+
+  install:
+    desc: Install VibeDiff globally
+    deps: [build-web]
+    cmds:
+      - go install -ldflags "{{.LDFLAGS}}"
+
+  test:
+    desc: Run tests
+    cmds:
+      - go test ./...
+
+  lint:
+    desc: Run linter
+    cmds:
+      - golangci-lint run
+
+  fmt:
+    desc: Format code
+    cmds:
+      - go fmt ./...
+
+  tidy:
+    desc: Tidy go modules
+    cmds:
+      - go mod tidy
+
+  clean:
+    desc: Clean build artifacts
+    cmds:
+      - rm -f vibediff
+      - rm -rf web/dist
+
+  version:
+    desc: Show version information
+    silent: true
+    cmds:
+      - echo "Version {{.VERSION}}"
+      - echo "Commit {{.COMMIT}}"
+      - echo "Build date {{.BUILD_DATE}}"
+
+  release:
+    desc: Build release binaries for multiple platforms
+    deps: [build-web]
+    cmds:
+      - GOOS=linux GOARCH=amd64 go build -ldflags "{{.LDFLAGS}}" -o vibediff-linux-amd64 .
+      - GOOS=linux GOARCH=arm64 go build -ldflags "{{.LDFLAGS}}" -o vibediff-linux-arm64 .
+      - GOOS=darwin GOARCH=amd64 go build -ldflags "{{.LDFLAGS}}" -o vibediff-darwin-amd64 .
+      - GOOS=darwin GOARCH=arm64 go build -ldflags "{{.LDFLAGS}}" -o vibediff-darwin-arm64 .
+      - GOOS=windows GOARCH=amd64 go build -ldflags "{{.LDFLAGS}}" -o vibediff-windows-amd64.exe .
+      - GOOS=windows GOARCH=arm64 go build -ldflags "{{.LDFLAGS}}" -o vibediff-windows-arm64.exe .
+    env:
+      CGO_ENABLED: 0
