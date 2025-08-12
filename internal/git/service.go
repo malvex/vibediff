@@ -46,6 +46,19 @@ func (s *Service) GetDiff(diffType DiffType, contextLines ...int) (*DiffResult, 
 		return nil, fmt.Errorf("failed to parse diff: %w", err)
 	}
 
+	// Get untracked files and add them to the diff
+	if diffType == DiffTypeUnstaged || diffType == DiffTypeAll {
+		untrackedFiles, err := s.getUntrackedFiles()
+		if err == nil && len(untrackedFiles) > 0 {
+			for _, filepath := range untrackedFiles {
+				fileDiff, err := s.getUntrackedFileDiff(filepath, context)
+				if err == nil && fileDiff != nil {
+					files = append(files, *fileDiff)
+				}
+			}
+		}
+	}
+
 	return &DiffResult{
 		Files: files,
 		Type:  diffType,
@@ -109,6 +122,22 @@ func (s *Service) GetFileContent(filePath string) (string, error) {
 
 // GetFileDiff retrieves diff for a specific file with optional context lines
 func (s *Service) GetFileDiff(filename string, diffType DiffType, contextLines ...int) (*FileDiff, error) {
+	context := 3
+	if len(contextLines) > 0 {
+		context = contextLines[0]
+	}
+
+	// Check if it's an untracked file
+	untrackedFiles, err := s.getUntrackedFiles()
+	if err == nil {
+		for _, untracked := range untrackedFiles {
+			if untracked == filename {
+				return s.getUntrackedFileDiff(filename, context)
+			}
+		}
+	}
+
+	// Otherwise get from regular diff
 	diff, err := s.GetDiff(diffType, contextLines...)
 	if err != nil {
 		return nil, err
@@ -126,4 +155,66 @@ func (s *Service) GetFileDiff(filename string, diffType DiffType, contextLines .
 // GetFileDiffWithFullContext is a convenience method for getting full file context
 func (s *Service) GetFileDiffWithFullContext(filename string, diffType DiffType) (*FileDiff, error) {
 	return s.GetFileDiff(filename, diffType, 999999)
+}
+
+// getUntrackedFiles returns list of untracked files from git status
+func (s *Service) getUntrackedFiles() ([]string, error) {
+	output, err := s.runGitCommand("ls-files", "--others", "--exclude-standard")
+	if err != nil {
+		return nil, err
+	}
+
+	if output == "" {
+		return []string{}, nil
+	}
+
+	lines := strings.Split(strings.TrimSpace(output), "\n")
+	var files []string
+	for _, line := range lines {
+		if line != "" {
+			files = append(files, line)
+		}
+	}
+
+	return files, nil
+}
+
+// getUntrackedFileDiff creates a diff for an untracked file
+func (s *Service) getUntrackedFileDiff(filepath string, contextLines int) (*FileDiff, error) {
+	// Read file content
+	content, err := exec.Command("cat", filepath).Output()
+	if err != nil {
+		return nil, fmt.Errorf("failed to read untracked file %s: %w", filepath, err)
+	}
+
+	lines := strings.Split(string(content), "\n")
+	
+	// Create diff lines showing all lines as added
+	var diffLines []Line
+	for i, line := range lines {
+		lineNum := i + 1
+		diffLines = append(diffLines, Line{
+			Type:      LineTypeAdded,
+			NewNumber: &lineNum,
+			Content:   line,
+		})
+	}
+
+	return &FileDiff{
+		Path:      filepath,
+		Status:    FileStatusAdded,
+		Additions: len(lines),
+		Deletions: 0,
+		IsBinary:  false,
+		Hunks: []Hunk{
+			{
+				OldStart: 0,
+				OldLines: 0,
+				NewStart: 1,
+				NewLines: len(lines),
+				Header:   fmt.Sprintf("@@ -0,0 +1,%d @@", len(lines)),
+				Lines:    diffLines,
+			},
+		},
+	}, nil
 }
