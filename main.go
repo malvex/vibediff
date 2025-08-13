@@ -63,6 +63,7 @@ func main() {
 		version = flag.Bool("version", false, "Show version information")
 		format  = flag.String("format", "text", "Output format for review comments (text or json)")
 		noOpen  = flag.Bool("no-open", false, "Disable automatic browser opening")
+		target  = flag.String("target", "", "Git diff target (e.g., 'main', 'HEAD~1', commit hash)")
 	)
 	flag.Parse()
 
@@ -89,6 +90,7 @@ func main() {
 	reviewStore := review.NewStore()
 
 	gitService := git.NewService()
+	gitService.SetDiffTarget(*target)
 	handler := handlers.NewHandler(gitService, reviewStore)
 	handler.SetFormat(*format)
 

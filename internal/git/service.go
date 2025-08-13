@@ -7,10 +7,17 @@ import (
 	"strings"
 )
 
-type Service struct{}
+type Service struct{
+	diffTarget string
+}
 
 func NewService() *Service {
 	return &Service{}
+}
+
+// SetDiffTarget sets the target for git diff (e.g., "main", "HEAD~1", commit hash)
+func (s *Service) SetDiffTarget(target string) {
+	s.diffTarget = target
 }
 
 // GetDiff retrieves the git diff with optional context lines (default: 3)
@@ -22,13 +29,18 @@ func (s *Service) GetDiff(diffType DiffType, contextLines ...int) (*DiffResult, 
 
 	var args []string
 
-	switch diffType {
-	case DiffTypeStaged:
-		args = []string{"diff", "--cached", "--no-color", "--no-ext-diff"}
-	case DiffTypeUnstaged:
-		args = []string{"diff", "--no-color", "--no-ext-diff"}
-	default:
-		args = []string{"diff", "HEAD", "--no-color", "--no-ext-diff"}
+	// If a diff target is specified, use it instead of the default behavior
+	if s.diffTarget != "" {
+		args = []string{"diff", s.diffTarget, "--no-color", "--no-ext-diff"}
+	} else {
+		switch diffType {
+		case DiffTypeStaged:
+			args = []string{"diff", "--cached", "--no-color", "--no-ext-diff"}
+		case DiffTypeUnstaged:
+			args = []string{"diff", "--no-color", "--no-ext-diff"}
+		default:
+			args = []string{"diff", "HEAD", "--no-color", "--no-ext-diff"}
+		}
 	}
 
 	// Add context parameter
