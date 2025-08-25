@@ -10,7 +10,9 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"os/exec"
 	"os/signal"
+	"runtime"
 	"syscall"
 	"time"
 
@@ -32,6 +34,26 @@ var (
 //go:embed all:web/dist
 var webFiles embed.FS
 
+// openBrowser opens the default browser to the specified URL
+func openBrowser(url string) error {
+	var cmd string
+	var args []string
+
+	switch runtime.GOOS {
+	case "windows":
+		cmd = "cmd"
+		args = []string{"/c", "start", url}
+	case "darwin":
+		cmd = "open"
+		args = []string{url}
+	default: // "linux", "freebsd", "openbsd", "netbsd"
+		cmd = "xdg-open"
+		args = []string{url}
+	}
+
+	return exec.Command(cmd, args...).Start()
+}
+
 func main() {
 	// Parse command line flags
 	var (
@@ -40,6 +62,7 @@ func main() {
 		debug   = flag.Bool("debug", false, "Enable debug logging")
 		version = flag.Bool("version", false, "Show version information")
 		format  = flag.String("format", "text", "Output format for review comments (text or json)")
+		noOpen  = flag.Bool("no-open", false, "Disable automatic browser opening")
 	)
 	flag.Parse()
 
@@ -127,8 +150,29 @@ func main() {
 		WriteTimeout: 15 * time.Second,
 	}
 
+	// Determine if we should open the browser
+	shouldOpen := true
+	if *noOpen {
+		shouldOpen = false
+	} else if os.Getenv("VIBEDIFF_NO_OPEN") != "" {
+		shouldOpen = false
+	}
+
 	go func() {
 		fmt.Fprintf(os.Stderr, "Starting VibeDiff server on http://%s\n", addr)
+		
+		// Open browser if enabled
+		if shouldOpen {
+			// Give the server a moment to start
+			time.Sleep(100 * time.Millisecond)
+			url := fmt.Sprintf("http://%s", addr)
+			if err := openBrowser(url); err != nil {
+				log.Printf("Failed to open browser: %v", err)
+			} else {
+				fmt.Fprintf(os.Stderr, "Opening browser at %s\n", url)
+			}
+		}
+		
 		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			log.Fatalf("Server failed to start: %v", err)
 		}
