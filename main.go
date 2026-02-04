@@ -86,9 +86,16 @@ func main() {
 		os.Setenv("VIBEDIFF_DEBUG", "true")
 	}
 
+	// Get diff target from positional argument
+	var target string
+	if flag.NArg() > 0 {
+		target = flag.Arg(0)
+	}
+
 	reviewStore := review.NewStore()
 
 	gitService := git.NewService()
+	gitService.SetDiffTarget(target)
 	handler := handlers.NewHandler(gitService, reviewStore)
 	handler.SetFormat(*format)
 
