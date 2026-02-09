@@ -40,6 +40,7 @@ export interface Comment {
   id: string
   file: string
   line: number
+  lineEnd?: number
   content: string
   createdAt: string
 }

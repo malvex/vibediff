@@ -1,7 +1,8 @@
-import React from 'react'
+import React, { useMemo, useCallback } from 'react'
 import type { FileDiff as FileDiffType, ViewMode, DiffLine as DiffLineType, Comment } from '../types/diff'
 import DiffLine from './DiffLine'
 import CommentDisplay from './CommentDisplay'
+import { useRangeSelection } from '../hooks/useRangeSelection'
 
 interface SplitViewLineResult {
   line: React.ReactNode
@@ -14,7 +15,7 @@ interface FileDiffProps {
   viewMode: ViewMode
   collapsed: boolean
   onToggleCollapse: () => void
-  onAddComment: (line: number) => void
+  onAddComment: (line: number, lineEnd?: number) => void
   onViewFullFile: () => void
   getCommentsForLine: (file: string, line: number) => Comment[]
   onDeleteComment: (id: string) => Promise<void>
@@ -34,6 +35,25 @@ export default function FileDiff({
   hideViewFullFile = false,
   wrapLines = false
 }: FileDiffProps): React.ReactElement {
+  const lineOrder = useMemo(() =>
+    file.hunks.flatMap(hunk =>
+      hunk.lines.map(line => {
+        const isDel = line.type === 'delete' || line.type === 'deleted'
+        return isDel
+          ? -(line.oldLineNumber ?? line.oldNumber ?? 0)
+          : (line.newLineNumber ?? line.newNumber ?? 0)
+      })
+    ), [file.hunks])
+
+  const handleSelect = useCallback((line: number, lineEnd?: number) => {
+    onAddComment(line, lineEnd)
+  }, [onAddComment])
+
+  const { handleDragStart, handleDragEnter, selectedLines } = useRangeSelection({
+    lineOrder,
+    onSelect: handleSelect
+  })
+
   return (
     <div id={`file-${file.path.replace(/\//g, '-')}`} className="border border-[#d1d5da] dark:border-[#30363d] rounded-md mb-4">
       {/* File Header */}
@@ -102,9 +122,10 @@ export default function FileDiff({
                           <DiffLine
                             line={line}
                             viewMode="unified"
-                            onMouseEnter={() => { /* hover effect */ }}
+                            onMouseEnter={() => { handleDragEnter(lineNumber); }}
                             onMouseLeave={() => { /* hover effect */ }}
-                            onAddComment={() => { onAddComment(lineNumber); }}
+                            onDragStart={() => { handleDragStart(lineNumber); }}
+                            isInSelection={selectedLines.has(lineNumber)}
                             filename={file.path}
                             wrapLines={wrapLines}
                           />
@@ -150,9 +171,10 @@ export default function FileDiff({
                             key={`${String(hunkIndex)}-${String(index)}`}
                             line={line}
                             viewMode="split"
-                            onMouseEnter={() => { /* hover effect */ }}
+                            onMouseEnter={() => { handleDragEnter(lineNumber); }}
                             onMouseLeave={() => { /* hover effect */ }}
-                            onAddComment={() => { onAddComment(lineNumber); }}
+                            onDragStart={() => { handleDragStart(lineNumber); }}
+                            isInSelection={selectedLines.has(lineNumber)}
                             filename={file.path}
                             wrapLines={wrapLines}
                           />

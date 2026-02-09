@@ -222,3 +222,26 @@ code[class*="language-"] {
 .split-diff-table td.line-code {
   width: 50%;
 }
+
+/* Range selection highlight */
+.line-selected td.line-code,
+td.line-selected.line-code {
+  background-color: rgba(3, 102, 214, 0.1) !important;
+}
+
+.line-selected td.line-num,
+td.line-selected.line-num {
+  background-color: rgba(3, 102, 214, 0.15) !important;
+  color: rgba(3, 102, 214, 0.8) !important;
+}
+
+.dark .line-selected td.line-code,
+.dark td.line-selected.line-code {
+  background-color: rgba(31, 111, 235, 0.15) !important;
+}
+
+.dark .line-selected td.line-num,
+.dark td.line-selected.line-num {
+  background-color: rgba(31, 111, 235, 0.2) !important;
+  color: rgba(31, 111, 235, 0.8) !important;
+}

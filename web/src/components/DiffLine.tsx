@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import React, { useMemo } from 'react'
 import type { DiffLine as DiffLineType } from '../types/diff'
 import { getLanguageFromFilename, highlightCode } from '../utils/prism'
 
@@ -7,7 +7,8 @@ interface DiffLineProps {
   viewMode: 'unified' | 'split'
   onMouseEnter: () => void
   onMouseLeave: () => void
-  onAddComment: () => void
+  onDragStart?: () => void
+  isInSelection?: boolean
   filename: string
   wrapLines?: boolean
 }
@@ -23,24 +24,28 @@ const LINE_TYPE_CONFIG = {
 }
 
 // Add Comment Button Component
-const AddCommentButton = ({ onClick }: { onClick: () => void }): React.ReactElement => (
+const AddCommentButton = ({ onDragStart }: { onDragStart?: () => void }): React.ReactElement => (
   <button
-    onClick={onClick}
+    onMouseDown={(e) => {
+      e.preventDefault()
+      onDragStart?.()
+    }}
     className="absolute -left-[26px] top-0 w-[22px] h-5 bg-[#0366d6] dark:bg-[#1f6feb] text-white rounded-[3px] text-base leading-5 cursor-pointer hidden group-hover:block hover:bg-[#0256c7] dark:hover:bg-[#388bfd] hover:scale-110 transition-transform p-0"
   >
     +
   </button>
 )
 
-export default function DiffLine({
+const DiffLine = React.memo(({
   line,
   viewMode,
   onMouseEnter,
   onMouseLeave,
-  onAddComment,
+  onDragStart,
+  isInSelection = false,
   filename,
   wrapLines = false
-}: DiffLineProps): React.ReactElement {
+}: DiffLineProps): React.ReactElement => {
   const config = LINE_TYPE_CONFIG[line.type]
   const isAddition = line.type === 'add' || line.type === 'added'
   const isDeletion = line.type === 'delete' || line.type === 'deleted'
@@ -59,7 +64,7 @@ export default function DiffLine({
   if (viewMode === 'unified') {
     return (
       <tr
-        className={`group font-mono text-xs leading-5 diff-line ${config.class}`}
+        className={`group font-mono text-xs leading-5 diff-line ${config.class} ${isInSelection ? 'line-selected' : ''}`}
         onMouseEnter={onMouseEnter}
         onMouseLeave={onMouseLeave}
       >
@@ -77,7 +82,7 @@ export default function DiffLine({
         <td className={`line-code px-[10px] py-0 relative w-full ${wrapLines ? 'whitespace-pre-wrap break-all' : 'whitespace-pre'} ${config.codeClass}`} data-prefix={config.prefix}>
           <code className={`language-${getLanguageFromFilename(filename)}`} dangerouslySetInnerHTML={{ __html: highlightedContent }} />
 
-          <AddCommentButton onClick={onAddComment} />
+          <AddCommentButton onDragStart={onDragStart} />
         </td>
       </tr>
     )
@@ -88,25 +93,27 @@ export default function DiffLine({
     <>
       {isDeletion || line.type === 'normal' || line.type === 'context' ? (
         <>
-          <td className={`line-num w-[50px] min-w-[50px] px-[10px] text-center select-none border-r border-[#e1e4e8] dark:border-[#30363d] ${isDeletion ? 'line-num-deletion' : ''}`}>
+          <td className={`line-num w-[50px] min-w-[50px] px-[10px] text-center select-none border-r border-[#e1e4e8] dark:border-[#30363d] ${isDeletion ? 'line-num-deletion' : ''} ${isInSelection ? 'line-selected' : ''}`}>
             {line.oldLineNumber ?? line.oldNumber ?? ''}
           </td>
-          <td className={`line-code px-[10px] py-0 relative border-r-2 border-r-[#e1e4e8] dark:border-r-[#30363d] ${wrapLines ? 'whitespace-pre-wrap break-all' : 'whitespace-pre'} ${config.codeClass}`} data-prefix={config.prefix}>
+          <td className={`line-code px-[10px] py-0 relative border-r-2 border-r-[#e1e4e8] dark:border-r-[#30363d] ${wrapLines ? 'whitespace-pre-wrap break-all' : 'whitespace-pre'} ${config.codeClass} ${isInSelection ? 'line-selected' : ''}`} data-prefix={config.prefix}>
             <code className={`language-${getLanguageFromFilename(filename)}`} dangerouslySetInnerHTML={{ __html: highlightedContent }} />
-            <AddCommentButton onClick={onAddComment} />
+            <AddCommentButton onDragStart={onDragStart} />
           </td>
         </>
       ) : (
         <>
-          <td className={`line-num w-[50px] min-w-[50px] px-[10px] text-center select-none border-r border-[#e1e4e8] dark:border-[#30363d] ${isAddition ? 'line-num-addition' : ''}`}>
+          <td className={`line-num w-[50px] min-w-[50px] px-[10px] text-center select-none border-r border-[#e1e4e8] dark:border-[#30363d] ${isAddition ? 'line-num-addition' : ''} ${isInSelection ? 'line-selected' : ''}`}>
             {line.newLineNumber ?? line.newNumber ?? ''}
           </td>
-          <td className={`line-code px-[10px] py-0 relative ${wrapLines ? 'whitespace-pre-wrap break-all' : 'whitespace-pre'} ${config.codeClass}`} data-prefix={config.prefix}>
+          <td className={`line-code px-[10px] py-0 relative ${wrapLines ? 'whitespace-pre-wrap break-all' : 'whitespace-pre'} ${config.codeClass} ${isInSelection ? 'line-selected' : ''}`} data-prefix={config.prefix}>
             <code className={`language-${getLanguageFromFilename(filename)}`} dangerouslySetInnerHTML={{ __html: highlightedContent }} />
-            <AddCommentButton onClick={onAddComment} />
+            <AddCommentButton onDragStart={onDragStart} />
           </td>
         </>
       )}
     </>
   )
-}
+})
+
+export default DiffLine

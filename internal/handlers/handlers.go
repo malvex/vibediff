@@ -91,7 +91,11 @@ func (h *Handler) AddComment(w http.ResponseWriter, r *http.Request) {
 
 	// Print immediately in text format
 	if h.format == "text" {
-		fmt.Printf("\n%s:%d\n", comment.File, comment.Line)
+		if comment.LineEnd != 0 && comment.LineEnd != comment.Line {
+			fmt.Printf("\n%s:%d-%d\n", comment.File, comment.Line, comment.LineEnd)
+		} else {
+			fmt.Printf("\n%s:%d\n", comment.File, comment.Line)
+		}
 		fmt.Printf("%s\n", comment.Content)
 	}
 

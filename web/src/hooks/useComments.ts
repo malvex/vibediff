@@ -3,7 +3,7 @@ import type { Comment } from '../types/diff'
 
 interface UseCommentsReturn {
   comments: Comment[]
-  addComment: (file: string, line: number, content: string) => Promise<Comment>
+  addComment: (file: string, line: number, content: string, lineEnd?: number) => Promise<Comment>
   deleteComment: (id: string) => Promise<void>
   getCommentsForLine: (file: string, line: number) => Comment[]
 }
@@ -28,7 +28,7 @@ export function useComments(): UseCommentsReturn {
     void fetchComments()
   }, [])
 
-  const addComment = useCallback(async (file: string, line: number, content: string) => {
+  const addComment = useCallback(async (file: string, line: number, content: string, lineEnd?: number) => {
     try {
       const response = await fetch('/api/review/comment', {
         method: 'POST',
@@ -36,7 +36,8 @@ export function useComments(): UseCommentsReturn {
         body: JSON.stringify({
           file,
           line,
-          content
+          content,
+          ...(lineEnd !== undefined ? { lineEnd } : {})
         })
       })
 
@@ -72,7 +73,10 @@ export function useComments(): UseCommentsReturn {
   }, [])
 
   const getCommentsForLine = useCallback((file: string, line: number) => {
-    return comments.filter(c => c.file === file && c.line === line)
+    return comments.filter(c => c.file === file && (
+      (c.line === line && !c.lineEnd) ||
+      (c.lineEnd === line)
+    ))
   }, [comments])
 
   return {
