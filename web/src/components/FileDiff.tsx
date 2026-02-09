@@ -18,6 +18,7 @@ interface FileDiffProps {
   onAddComment: (line: number, lineEnd?: number) => void
   onViewFullFile: () => void
   getCommentsForLine: (file: string, line: number) => Comment[]
+  getCommentRangeLines?: (file: string, lineOrder: number[]) => Set<number>
   onDeleteComment: (id: string) => Promise<void>
   hideViewFullFile?: boolean
   wrapLines?: boolean
@@ -31,6 +32,7 @@ export default function FileDiff({
   onAddComment,
   onViewFullFile,
   getCommentsForLine,
+  getCommentRangeLines,
   onDeleteComment,
   hideViewFullFile = false,
   wrapLines = false
@@ -44,6 +46,10 @@ export default function FileDiff({
           : (line.newLineNumber ?? line.newNumber ?? 0)
       })
     ), [file.hunks])
+
+  const commentRangeLines = useMemo(() =>
+    getCommentRangeLines ? getCommentRangeLines(file.path, lineOrder) : new Set<number>()
+  , [getCommentRangeLines, file.path, lineOrder])
 
   const handleSelect = useCallback((line: number, lineEnd?: number) => {
     onAddComment(line, lineEnd)
@@ -126,6 +132,7 @@ export default function FileDiff({
                             onMouseLeave={() => { /* hover effect */ }}
                             onDragStart={() => { handleDragStart(lineNumber); }}
                             isInSelection={selectedLines.has(lineNumber)}
+                            isInCommentRange={commentRangeLines.has(lineNumber)}
                             filename={file.path}
                             wrapLines={wrapLines}
                           />
@@ -175,6 +182,7 @@ export default function FileDiff({
                             onMouseLeave={() => { /* hover effect */ }}
                             onDragStart={() => { handleDragStart(lineNumber); }}
                             isInSelection={selectedLines.has(lineNumber)}
+                            isInCommentRange={commentRangeLines.has(lineNumber)}
                             filename={file.path}
                             wrapLines={wrapLines}
                           />

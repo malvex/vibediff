@@ -6,6 +6,7 @@ interface UseCommentsReturn {
   addComment: (file: string, line: number, content: string, lineEnd?: number) => Promise<Comment>
   deleteComment: (id: string) => Promise<void>
   getCommentsForLine: (file: string, line: number) => Comment[]
+  getCommentRangeLines: (file: string, lineOrder: number[]) => Set<number>
 }
 
 export function useComments(): UseCommentsReturn {
@@ -79,10 +80,29 @@ export function useComments(): UseCommentsReturn {
     ))
   }, [comments])
 
+  const getCommentRangeLines = useCallback((file: string, lineOrder: number[]): Set<number> => {
+    const result = new Set<number>()
+    const rangeComments = comments.filter(
+      (c): c is Comment & { lineEnd: number } => c.file === file && c.lineEnd !== undefined && c.lineEnd !== c.line
+    )
+    for (const c of rangeComments) {
+      const startIdx = lineOrder.indexOf(c.line)
+      const endIdx = lineOrder.indexOf(c.lineEnd)
+      if (startIdx === -1 || endIdx === -1) continue
+      const lo = Math.min(startIdx, endIdx)
+      const hi = Math.max(startIdx, endIdx)
+      for (let i = lo; i <= hi; i++) {
+        result.add(lineOrder[i])
+      }
+    }
+    return result
+  }, [comments])
+
   return {
     comments,
     addComment,
     deleteComment,
-    getCommentsForLine
+    getCommentsForLine,
+    getCommentRangeLines
   }
 }

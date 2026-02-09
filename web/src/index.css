@@ -245,3 +245,24 @@ td.line-selected.line-num {
   background-color: rgba(31, 111, 235, 0.2) !important;
   color: rgba(31, 111, 235, 0.8) !important;
 }
+
+/* Persistent range highlight for saved comments */
+.line-commented-range td.line-code,
+td.line-commented-range.line-code {
+  background-color: rgba(3, 102, 214, 0.06) !important;
+}
+
+.line-commented-range td.line-num,
+td.line-commented-range.line-num {
+  background-color: rgba(3, 102, 214, 0.08) !important;
+}
+
+.dark .line-commented-range td.line-code,
+.dark td.line-commented-range.line-code {
+  background-color: rgba(31, 111, 235, 0.08) !important;
+}
+
+.dark .line-commented-range td.line-num,
+.dark td.line-commented-range.line-num {
+  background-color: rgba(31, 111, 235, 0.1) !important;
+}

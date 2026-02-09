@@ -29,7 +29,7 @@ export default function DiffViewer({ className = '' }: DiffViewerProps): React.R
   const [isRefreshing, setIsRefreshing] = useState(false)
 
   const { data, loading, error, refetch } = useDiff(diffType)
-  const { addComment, deleteComment, getCommentsForLine } = useComments()
+  const { addComment, deleteComment, getCommentsForLine, getCommentRangeLines } = useComments()
   const { lastUpdate } = useWebSocketUpdates()
 
   // Refetch when WebSocket triggers an update
@@ -330,6 +330,7 @@ export default function DiffViewer({ className = '' }: DiffViewerProps): React.R
                 onAddComment={(line, lineEnd) => { setCommentDialog({ file: file.path, line, lineEnd }); }}
                 onViewFullFile={() => { setFullFileModal(file.path); }}
                 getCommentsForLine={getCommentsForLine}
+                getCommentRangeLines={getCommentRangeLines}
                 onDeleteComment={deleteComment}
                 wrapLines={wrapLines}
               />
@@ -348,6 +349,7 @@ export default function DiffViewer({ className = '' }: DiffViewerProps): React.R
               onAddComment={(line, lineEnd) => { setCommentDialog({ file: selectedFile.path, line, lineEnd }); }}
               onViewFullFile={() => { setFullFileModal(selectedFile.path); }}
               getCommentsForLine={getCommentsForLine}
+              getCommentRangeLines={getCommentRangeLines}
               onDeleteComment={deleteComment}
               wrapLines={wrapLines}
             />
@@ -387,6 +389,7 @@ export default function DiffViewer({ className = '' }: DiffViewerProps): React.R
         onClose={() => { setFullFileModal(null); }}
         viewMode={viewMode}
         getCommentsForLine={getCommentsForLine}
+        getCommentRangeLines={getCommentRangeLines}
         onDeleteComment={deleteComment}
         onAddComment={(file, line, content, lineEnd) => {
           void addComment(file, line, content, lineEnd).catch((err: unknown) => {

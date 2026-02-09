@@ -9,12 +9,13 @@ interface FullFileModalProps {
   onClose: () => void
   viewMode: 'unified' | 'split'
   getCommentsForLine: (file: string, line: number) => Comment[]
+  getCommentRangeLines?: (file: string, lineOrder: number[]) => Set<number>
   onDeleteComment: (id: string) => Promise<void>
   onAddComment: (file: string, line: number, content: string, lineEnd?: number) => void
   wrapLines?: boolean
 }
 
-export default function FullFileModal({ isOpen, filePath, onClose, viewMode, getCommentsForLine, onDeleteComment, onAddComment, wrapLines = false }: FullFileModalProps): React.ReactElement | null {
+export default function FullFileModal({ isOpen, filePath, onClose, viewMode, getCommentsForLine, getCommentRangeLines, onDeleteComment, onAddComment, wrapLines = false }: FullFileModalProps): React.ReactElement | null {
   const [fileData, setFileData] = useState<FileDiff | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -120,6 +121,7 @@ export default function FullFileModal({ isOpen, filePath, onClose, viewMode, get
                   }}
                   onViewFullFile={() => { /* Already in full view */ }}
                   getCommentsForLine={getCommentsForLine}
+                  getCommentRangeLines={getCommentRangeLines}
                   onDeleteComment={onDeleteComment}
                   hideViewFullFile={true}
                   wrapLines={wrapLines}

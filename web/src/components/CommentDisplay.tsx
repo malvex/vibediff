@@ -12,6 +12,11 @@ export default function CommentDisplay({ comments, onDelete }: CommentDisplayPro
     <div className="px-6 py-2 bg-[#f6f8fa] dark:bg-[#161b22] border-t border-b border-[#dfe2e5] dark:border-[#30363d]">
       {comments.map(comment => (
         <div key={comment.id} data-comment-id={comment.id} className="bg-white dark:bg-[#0d1117] border border-[#d1d5da] dark:border-[#30363d] rounded-md p-2 my-1 relative">
+          {comment.lineEnd && comment.lineEnd !== comment.line && (
+            <div className="text-xs text-[#586069] dark:text-[#8b949e] pb-1 mb-1 border-b border-[#e1e4e8] dark:border-[#30363d]">
+              Comment on lines {Math.abs(comment.line)} to {Math.abs(comment.lineEnd)}
+            </div>
+          )}
           <div className="flex justify-between items-start mb-1">
             <div className="text-xs text-[#586069] dark:text-[#8b949e]">
               {new Date(comment.createdAt).toLocaleString()}
