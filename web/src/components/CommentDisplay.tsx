@@ -12,22 +12,24 @@ export default function CommentDisplay({ comments, onDelete }: CommentDisplayPro
     <div className="px-6 py-2 bg-[#f6f8fa] dark:bg-[#161b22] border-t border-b border-[#dfe2e5] dark:border-[#30363d]">
       {comments.map(comment => (
         <div key={comment.id} data-comment-id={comment.id} className="bg-white dark:bg-[#0d1117] border border-[#d1d5da] dark:border-[#30363d] rounded-md p-2 my-1 relative">
-          {comment.lineEnd && comment.lineEnd !== comment.line && (
-            <div className="text-xs text-[#586069] dark:text-[#8b949e] pb-1 mb-1 border-b border-[#e1e4e8] dark:border-[#30363d]">
-              Comment on lines {Math.abs(comment.line)} to {Math.abs(comment.lineEnd)}
-            </div>
-          )}
-          <div className="flex justify-between items-start mb-1">
+          <div className="flex justify-between items-center pb-1 mb-1 border-b border-[#e1e4e8] dark:border-[#30363d]">
             <div className="text-xs text-[#586069] dark:text-[#8b949e]">
-              {new Date(comment.createdAt).toLocaleString()}
+              {comment.lineEnd !== comment.line
+                ? `Comment on lines ${Math.abs(comment.line)} to ${Math.abs(comment.lineEnd)}`
+                : `Comment on line ${Math.abs(comment.line)}`}
             </div>
-            <button
-              onClick={() => { onDelete(comment.id); }}
-              className="text-[rgba(27,31,35,.3)] dark:text-[rgba(139,148,158,.4)] hover:text-[#d73a49] dark:hover:text-[#f85149] text-xl leading-none p-0 w-5 h-5 flex items-center justify-center cursor-pointer border-none bg-transparent"
-              title="Delete comment"
-            >
-              ×
-            </button>
+            <div className="flex items-center gap-2">
+              <div className="text-xs text-[#586069] dark:text-[#8b949e] whitespace-nowrap">
+                {new Date(comment.createdAt).toLocaleString()}
+              </div>
+              <button
+                onClick={() => { onDelete(comment.id); }}
+                className="text-[rgba(27,31,35,.3)] dark:text-[rgba(139,148,158,.4)] hover:text-[#d73a49] dark:hover:text-[#f85149] text-xl leading-none p-0 w-5 h-5 flex items-center justify-center cursor-pointer border-none bg-transparent"
+                title="Delete comment"
+              >
+                ×
+              </button>
+            </div>
           </div>
           <div className="text-sm leading-[1.5] font-[-apple-system,BlinkMacSystemFont,'Segoe_UI',Helvetica,Arial,sans-serif]">
             {comment.content}

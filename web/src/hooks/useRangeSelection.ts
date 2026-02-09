@@ -2,7 +2,7 @@ import { useState, useCallback, useEffect, useRef, useMemo } from 'react'
 
 interface UseRangeSelectionOptions {
   lineOrder: number[]
-  onSelect: (line: number, lineEnd?: number) => void
+  onSelect: (line: number, lineEnd: number) => void
 }
 
 interface UseRangeSelectionReturn {
@@ -86,11 +86,7 @@ export function useRangeSelection({ lineOrder, onSelect }: UseRangeSelectionOpti
         if (startIdx !== undefined && currentIdx !== undefined) {
           const minIdx = Math.min(startIdx, currentIdx)
           const maxIdx = Math.max(startIdx, currentIdx)
-          if (minIdx === maxIdx) {
-            onSelect(lineOrder[minIdx])
-          } else {
-            onSelect(lineOrder[minIdx], lineOrder[maxIdx])
-          }
+          onSelect(lineOrder[minIdx], lineOrder[maxIdx])
         }
       }
       cancelDrag()

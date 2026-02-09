@@ -24,11 +24,11 @@ describe('useComments - getCommentRangeLines', () => {
     expect(rangeLines.size).toBe(0)
   })
 
-  it('returns empty set when comments exist but none are range comments', async () => {
+  it('highlights single-line comments', async () => {
     mockFetch.mockResolvedValueOnce({
       ok: true,
       json: async () => [
-        { id: '1', file: 'file.ts', line: 3, content: 'single line', createdAt: new Date().toISOString() }
+        { id: '1', file: 'file.ts', line: 3, lineEnd: 3, content: 'single line', createdAt: new Date().toISOString() }
       ],
     })
 
@@ -40,7 +40,7 @@ describe('useComments - getCommentRangeLines', () => {
 
     const lineOrder = [1, 2, 3, 4, 5]
     const rangeLines = result.current.getCommentRangeLines('file.ts', lineOrder)
-    expect(rangeLines.size).toBe(0)
+    expect(rangeLines).toEqual(new Set([3]))
   })
 
   it('returns lines covered by a range comment', async () => {
@@ -97,7 +97,7 @@ describe('useComments - getCommentRangeLines', () => {
     expect(rangeLines.size).toBe(0)
   })
 
-  it('ignores comments where lineEnd equals line (not a range)', async () => {
+  it('highlights comments where lineEnd equals line as single-line', async () => {
     mockFetch.mockResolvedValueOnce({
       ok: true,
       json: async () => [
@@ -112,7 +112,7 @@ describe('useComments - getCommentRangeLines', () => {
 
     const lineOrder = [1, 2, 3, 4, 5]
     const rangeLines = result.current.getCommentRangeLines('file.ts', lineOrder)
-    expect(rangeLines.size).toBe(0)
+    expect(rangeLines).toEqual(new Set([3]))
   })
 
   it('handles multiple range comments merging their ranges', async () => {

@@ -77,7 +77,7 @@ describe('useRangeSelection', () => {
       document.dispatchEvent(new MouseEvent('mouseup'))
     })
 
-    expect(onSelect).toHaveBeenCalledWith(3)
+    expect(onSelect).toHaveBeenCalledWith(3, 3)
     expect(onSelect).toHaveBeenCalledTimes(1)
     expect(result.current.isDragging).toBe(false)
     expect(result.current.selectedLines.size).toBe(0)

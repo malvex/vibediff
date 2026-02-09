@@ -15,7 +15,7 @@ interface FileDiffProps {
   viewMode: ViewMode
   collapsed: boolean
   onToggleCollapse: () => void
-  onAddComment: (line: number, lineEnd?: number) => void
+  onAddComment: (line: number, lineEnd: number) => void
   onViewFullFile: () => void
   getCommentsForLine: (file: string, line: number) => Comment[]
   getCommentRangeLines?: (file: string, lineOrder: number[]) => Set<number>
@@ -51,7 +51,7 @@ export default function FileDiff({
     getCommentRangeLines ? getCommentRangeLines(file.path, lineOrder) : new Set<number>()
   , [getCommentRangeLines, file.path, lineOrder])
 
-  const handleSelect = useCallback((line: number, lineEnd?: number) => {
+  const handleSelect = useCallback((line: number, lineEnd: number) => {
     onAddComment(line, lineEnd)
   }, [onAddComment])
 

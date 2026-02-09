@@ -11,7 +11,7 @@ interface FullFileModalProps {
   getCommentsForLine: (file: string, line: number) => Comment[]
   getCommentRangeLines?: (file: string, lineOrder: number[]) => Set<number>
   onDeleteComment: (id: string) => Promise<void>
-  onAddComment: (file: string, line: number, content: string, lineEnd?: number) => void
+  onAddComment: (file: string, line: number, content: string, lineEnd: number) => void
   wrapLines?: boolean
 }
 
@@ -19,7 +19,7 @@ export default function FullFileModal({ isOpen, filePath, onClose, viewMode, get
   const [fileData, setFileData] = useState<FileDiff | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [commentDialog, setCommentDialog] = useState<{ line: number; lineEnd?: number } | null>(null)
+  const [commentDialog, setCommentDialog] = useState<{ line: number; lineEnd: number } | null>(null)
 
   const fetchFileContent = useCallback(async (): Promise<void> => {
     setLoading(true)
@@ -137,7 +137,7 @@ export default function FullFileModal({ isOpen, filePath, onClose, viewMode, get
         isOpen={!!commentDialog}
         file={filePath}
         line={commentDialog?.line ?? 0}
-        lineEnd={commentDialog?.lineEnd}
+        lineEnd={commentDialog?.lineEnd ?? 0}
         onSubmit={(content) => {
           if (commentDialog) {
             onAddComment(filePath, commentDialog.line, content, commentDialog.lineEnd)

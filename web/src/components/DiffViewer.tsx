@@ -21,7 +21,7 @@ export default function DiffViewer({ className = '' }: DiffViewerProps): React.R
   const [selectedFile, setSelectedFile] = useState<FileDiffType | null>(null)
   const [displayMode, setDisplayMode] = useState<'single' | 'all'>('single')
   const [collapsedFiles, setCollapsedFiles] = useState<Set<string>>(new Set())
-  const [commentDialog, setCommentDialog] = useState<{ file: string; line: number; lineEnd?: number } | null>(null)
+  const [commentDialog, setCommentDialog] = useState<{ file: string; line: number; lineEnd: number } | null>(null)
   const [fullFileModal, setFullFileModal] = useState<string | null>(null)
   const [fileViewMode, setFileViewMode] = useState<'list' | 'tree'>('list')
   const [collapsedFolders, setCollapsedFolders] = useState<Set<string>>(new Set())
@@ -369,7 +369,7 @@ export default function DiffViewer({ className = '' }: DiffViewerProps): React.R
         isOpen={!!commentDialog}
         file={commentDialog?.file ?? ''}
         line={commentDialog?.line ?? 0}
-        lineEnd={commentDialog?.lineEnd}
+        lineEnd={commentDialog?.lineEnd ?? 0}
         onSubmit={(content) => {
           if (commentDialog) {
             void addComment(commentDialog.file, commentDialog.line, content, commentDialog.lineEnd).then(() => {

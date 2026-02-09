@@ -3,7 +3,7 @@ import type { Comment } from '../types/diff'
 
 interface UseCommentsReturn {
   comments: Comment[]
-  addComment: (file: string, line: number, content: string, lineEnd?: number) => Promise<Comment>
+  addComment: (file: string, line: number, content: string, lineEnd: number) => Promise<Comment>
   deleteComment: (id: string) => Promise<void>
   getCommentsForLine: (file: string, line: number) => Comment[]
   getCommentRangeLines: (file: string, lineOrder: number[]) => Set<number>
@@ -29,24 +29,18 @@ export function useComments(): UseCommentsReturn {
     void fetchComments()
   }, [])
 
-  const addComment = useCallback(async (file: string, line: number, content: string, lineEnd?: number) => {
+  const addComment = useCallback(async (file: string, line: number, content: string, lineEnd: number) => {
     try {
       const response = await fetch('/api/review/comment', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          file,
-          line,
-          content,
-          ...(lineEnd !== undefined ? { lineEnd } : {})
-        })
+        body: JSON.stringify({ file, line, content, lineEnd })
       })
 
       if (!response.ok) {
         throw new Error('Failed to add comment')
       }
 
-      // Get the created comment from response
       const createdComment = await response.json() as Comment
       setComments(prev => [...prev, createdComment])
       return createdComment
@@ -74,18 +68,13 @@ export function useComments(): UseCommentsReturn {
   }, [])
 
   const getCommentsForLine = useCallback((file: string, line: number) => {
-    return comments.filter(c => c.file === file && (
-      (c.line === line && !c.lineEnd) ||
-      (c.lineEnd === line)
-    ))
+    return comments.filter(c => c.file === file && c.lineEnd === line)
   }, [comments])
 
   const getCommentRangeLines = useCallback((file: string, lineOrder: number[]): Set<number> => {
     const result = new Set<number>()
-    const rangeComments = comments.filter(
-      (c): c is Comment & { lineEnd: number } => c.file === file && c.lineEnd !== undefined && c.lineEnd !== c.line
-    )
-    for (const c of rangeComments) {
+    const fileComments = comments.filter(c => c.file === file)
+    for (const c of fileComments) {
       const startIdx = lineOrder.indexOf(c.line)
       const endIdx = lineOrder.indexOf(c.lineEnd)
       if (startIdx === -1 || endIdx === -1) continue
