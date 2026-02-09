@@ -60,10 +60,10 @@ export function useRangeSelection({ lineOrder, onSelect }: UseRangeSelectionOpti
   }, [])
 
   const handleDragEnter = useCallback((lineNumber: number) => {
-    if (!isDragging) return
+    if (startRef.current === null) return
     currentRef.current = lineNumber
     computeSelectedLines()
-  }, [isDragging, computeSelectedLines])
+  }, [computeSelectedLines])
 
   const cancelDrag = useCallback(() => {
     startRef.current = null
