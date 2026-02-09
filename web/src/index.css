@@ -249,20 +249,22 @@ td.line-selected.line-num {
 /* Persistent range highlight for saved comments */
 .line-commented-range td.line-code,
 td.line-commented-range.line-code {
-  background-color: rgba(3, 102, 214, 0.06) !important;
+  background-color: rgba(3, 102, 214, 0.12) !important;
+  border-left: 3px solid rgba(3, 102, 214, 0.6) !important;
 }
 
 .line-commented-range td.line-num,
 td.line-commented-range.line-num {
-  background-color: rgba(3, 102, 214, 0.08) !important;
+  background-color: rgba(3, 102, 214, 0.15) !important;
 }
 
 .dark .line-commented-range td.line-code,
 .dark td.line-commented-range.line-code {
-  background-color: rgba(31, 111, 235, 0.08) !important;
+  background-color: rgba(31, 111, 235, 0.15) !important;
+  border-left: 3px solid rgba(31, 111, 235, 0.5) !important;
 }
 
 .dark .line-commented-range td.line-num,
 .dark td.line-commented-range.line-num {
-  background-color: rgba(31, 111, 235, 0.1) !important;
+  background-color: rgba(31, 111, 235, 0.18) !important;
 }
