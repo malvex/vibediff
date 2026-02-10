@@ -11,6 +11,7 @@ type Comment struct {
 	ID        string    `json:"id"`
 	File      string    `json:"file"`
 	Line      int       `json:"line,omitempty"`
+	LineEnd   int       `json:"lineEnd,omitempty"`
 	Side      string    `json:"side,omitempty"`
 	Content   string    `json:"content"`
 	CreatedAt time.Time `json:"createdAt"`
