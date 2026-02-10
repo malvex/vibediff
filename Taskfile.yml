@@ -65,6 +65,7 @@ tasks:
     desc: Clean build artifacts
     cmds:
       - rm -f vibediff
+      - rm -f vibediff-*
       - rm -rf web/dist
 
   version:
