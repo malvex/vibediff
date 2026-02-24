@@ -268,3 +268,20 @@ td.line-commented-range.line-num {
 .dark td.line-commented-range.line-num {
   background-color: rgba(31, 111, 235, 0.18) !important;
 }
+
+/* Resize separator */
+[data-separator] {
+  position: relative;
+  cursor: col-resize !important;
+  flex-shrink: 0 !important;
+}
+
+[data-separator]:active {
+  cursor: col-resize !important;
+}
+
+/* Ensure panels can resize properly */
+[data-panel] {
+  position: relative;
+  overflow: visible;
+}

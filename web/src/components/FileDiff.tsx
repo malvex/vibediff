@@ -61,16 +61,20 @@ export default function FileDiff({
   })
 
   return (
-    <div id={`file-${file.path.replace(/\//g, '-')}`} className="border border-[#d1d5da] dark:border-[#30363d] rounded-md mb-4">
+    <div id={`file-${file.path.replace(/\//g, '-')}`} className="border border-[#d1d5da] dark:border-[#30363d] rounded-md mb-3">
       {/* File Header */}
       <div
-        className="bg-[#f6f8fa] dark:bg-[#161b22] px-4 py-[10px] border-b border-[#d1d5da] dark:border-[#30363d] flex items-center justify-between gap-2 cursor-pointer select-none"
+        className="bg-[#f6f8fa] dark:bg-[#161b22] px-3 py-2 border-b border-[#d1d5da] dark:border-[#30363d] flex items-center justify-between gap-2 cursor-pointer select-none"
         onClick={onToggleCollapse}
       >
-        <div className="flex items-center gap-1 flex-1 cursor-pointer" onClick={(e) => { e.stopPropagation(); onToggleCollapse(); }}>
-          <span className="inline-block text-[#586069] dark:text-[#8b949e] text-xs leading-none font-mono">
-            {collapsed ? '▶' : '▼'}
-          </span>
+        <div className="flex items-center gap-2 flex-1 cursor-pointer" onClick={(e) => { e.stopPropagation(); onToggleCollapse(); }}>
+          <svg
+            className={`w-3 h-3 text-[#57606a] dark:text-[#8b949e] transition-transform ${collapsed ? '' : 'rotate-90'}`}
+            fill="currentColor"
+            viewBox="0 0 16 16"
+          >
+            <path d="M6 4l4 4-4 4V4z"/>
+          </svg>
 
           <div className="flex-1">
             <span className="text-sm font-semibold text-[#24292e] dark:text-[#c9d1d9] font-[-apple-system,BlinkMacSystemFont,'Segoe_UI',Helvetica,Arial,sans-serif]">

@@ -9,7 +9,7 @@ interface FileListProps {
   collapsedFolders: Set<string>
   onToggleFolderCollapse: (folder: string) => void
   reviewedFiles: Set<string>
-  onToggleReviewed: (filePath: string) => void
+  onToggleReviewed: (file: FileDiff) => void
 }
 
 export default function FileList({ files, selectedFile, onSelectFile, displayMode, viewMode, collapsedFolders, onToggleFolderCollapse, reviewedFiles, onToggleReviewed }: FileListProps): React.ReactElement {
@@ -105,19 +105,19 @@ export default function FileList({ files, selectedFile, onSelectFile, displayMod
               if (e.target instanceof HTMLInputElement) return
               handleFileClick(file)
             }}
-            className={`flex items-center gap-2 px-2 py-1.5 rounded-md cursor-pointer text-[13px] break-all transition-colors
+            className={`flex items-center gap-2 px-1.5 py-0.5 rounded cursor-pointer text-xs break-all transition-colors
               ${selectedFile?.path === node.file.path
-                ? 'bg-[rgba(54,158,255,0.1)] dark:bg-[rgba(177,186,196,0.12)] border-l-[3px] border-l-[#2188ff] dark:border-l-[#f78166] -ml-[3px] pl-[calc(0.5rem-3px)]'
-                : 'hover:bg-[#f0f3f6] dark:hover:bg-[rgba(255,255,255,0.05)]'
+                ? 'bg-[#ddf4ff] dark:bg-[#1c2d41] border-l-2 border-l-[#0969da] dark:border-l-[#1f6feb] -ml-[2px] pl-[calc(0.375rem-2px)] text-[#0969da] dark:text-[#58a6ff] font-medium'
+                : 'text-[#24292f] dark:text-[#adbac7] hover:bg-[#f6f8fa] dark:hover:bg-[#21262d]'
               }`}
-            style={{ paddingLeft: `${String(depth * 20 + 8)}px` }}
+            style={{ paddingLeft: `${String(depth * 16 + 6)}px` }}
           >
             <input
               type="checkbox"
               checked={reviewedFiles.has(file.path)}
               onChange={(e) => {
                 e.stopPropagation()
-                onToggleReviewed(file.path)
+                onToggleReviewed(file)
               }}
               onClick={(e) => { e.stopPropagation(); }}
               className="w-4 h-4 rounded border-[#d0d7de] dark:border-[#30363d]
@@ -141,16 +141,27 @@ export default function FileList({ files, selectedFile, onSelectFile, displayMod
         return (
           <div key={node.path} className="mb-0.5">
             <div
-              className="flex items-center px-2 py-1 rounded-[3px] cursor-pointer select-none hover:bg-[rgba(0,0,0,0.05)] dark:hover:bg-[rgba(255,255,255,0.05)]"
+              className="flex items-center gap-1.5 px-1.5 py-1 rounded cursor-pointer select-none hover:bg-[#e8eaed] dark:hover:bg-[#21262d] transition-colors"
               onClick={() => {
                 onToggleFolderCollapse(node.path)
               }}
-              style={{ paddingLeft: `${String(depth * 20 + 8)}px` }}
+              style={{ paddingLeft: `${String(depth * 16 + 6)}px` }}
             >
-              <span className="mr-1.5 text-[10px] text-[#586069] dark:text-[#8b949e] font-mono inline-block w-3">
-                {isCollapsed ? '▶' : '▼'}
-              </span>
-              <span className="font-medium text-sm">{node.name}</span>
+              <svg
+                className={`w-2.5 h-2.5 flex-shrink-0 text-[#656d76] dark:text-[#7d8590] transition-transform ${isCollapsed ? '' : 'rotate-90'}`}
+                fill="currentColor"
+                viewBox="0 0 16 16"
+              >
+                <path d="M6 4l4 4-4 4V4z"/>
+              </svg>
+              <svg
+                className="w-3.5 h-3.5 flex-shrink-0 text-[#54aeff] dark:text-[#539bf5]"
+                fill="currentColor"
+                viewBox="0 0 16 16"
+              >
+                <path d="M1.75 1A1.75 1.75 0 000 2.75v10.5C0 14.216.784 15 1.75 15h12.5A1.75 1.75 0 0016 13.25v-8.5A1.75 1.75 0 0014.25 3H7.5a.25.25 0 01-.2-.1l-.9-1.2C6.07 1.26 5.55 1 5 1H1.75z"/>
+              </svg>
+              <span className="text-xs font-semibold text-[#24292f] dark:text-[#e6edf3] truncate">{node.name}</span>
             </div>
             <div style={{ display: isCollapsed ? 'none' : 'block' }}>
               {node.children.map(child => renderTreeNode(child, depth + 1))}
@@ -178,10 +189,10 @@ export default function FileList({ files, selectedFile, onSelectFile, displayMod
             if (e.target instanceof HTMLInputElement) return
             handleFileClick(file)
           }}
-          className={`flex items-center gap-2 px-2 py-1.5 rounded-md cursor-pointer text-[13px] break-all transition-colors
+          className={`flex items-center gap-2 px-1.5 py-0.5 rounded cursor-pointer text-xs break-all transition-colors
             ${selectedFile?.path === file.path
-              ? 'bg-[rgba(54,158,255,0.1)] dark:bg-[rgba(177,186,196,0.12)] border-l-[3px] border-l-[#2188ff] dark:border-l-[#f78166] -ml-[3px] pl-[calc(0.5rem-3px)]'
-              : 'hover:bg-[#f0f3f6] dark:hover:bg-[rgba(255,255,255,0.05)]'
+              ? 'bg-[#ddf4ff] dark:bg-[#1c2d41] border-l-2 border-l-[#0969da] dark:border-l-[#1f6feb] -ml-[2px] pl-[calc(0.375rem-2px)] text-[#0969da] dark:text-[#58a6ff] font-medium'
+              : 'text-[#24292f] dark:text-[#adbac7] hover:bg-[#f6f8fa] dark:hover:bg-[#21262d]'
             }`}
         >
           <input
@@ -189,7 +200,7 @@ export default function FileList({ files, selectedFile, onSelectFile, displayMod
             checked={reviewedFiles.has(file.path)}
             onChange={(e) => {
               e.stopPropagation()
-              onToggleReviewed(file.path)
+              onToggleReviewed(file)
             }}
             onClick={(e) => { e.stopPropagation(); }}
             className="w-4 h-4 rounded border-[#d0d7de] dark:border-[#30363d]

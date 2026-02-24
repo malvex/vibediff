@@ -11,7 +11,7 @@ type ButtonVariant = 'left' | 'right' | 'middle' | 'single'
  * @returns Complete className string for the button
  */
 export function getButtonClassName(isActive: boolean, variant: ButtonVariant = 'single'): string {
-  const baseClasses = 'px-4 py-[5px] text-sm font-medium border cursor-pointer leading-5 transition-colors'
+  const baseClasses = 'px-3 py-[3px] text-xs font-medium border cursor-pointer leading-5 transition-colors'
 
   const roundedClasses: Record<ButtonVariant, string> = {
     left: 'rounded-l-md',
@@ -21,8 +21,8 @@ export function getButtonClassName(isActive: boolean, variant: ButtonVariant = '
   }
 
   const stateClasses = isActive
-    ? 'bg-[#0366d6] dark:bg-[#1f6feb] text-white border-[#0366d6] dark:border-[#1f6feb]'
-    : 'bg-[#fafbfc] dark:bg-[#21262d] text-[#24292e] dark:text-[#c9d1d9] border-[rgba(27,31,35,.15)] dark:border-[#30363d] hover:bg-[#f3f4f6] dark:hover:bg-[#30363d]'
+    ? 'bg-[#1f6feb] text-white border-[#1f6feb]'
+    : 'bg-[#21262d] text-[#c9d1d9] border-[#30363d] hover:bg-[#30363d] hover:border-[#484f58]'
 
   return `${baseClasses} ${roundedClasses[variant]} ${stateClasses}`
 }
@@ -36,8 +36,8 @@ export function getIconButtonClassName(isActive: boolean): string {
   const baseClasses = 'p-2 text-sm border rounded-md cursor-pointer transition-colors'
 
   const stateClasses = isActive
-    ? 'bg-[#0366d6] dark:bg-[#1f6feb] text-white border-[#0366d6] dark:border-[#1f6feb]'
-    : 'bg-[#fafbfc] dark:bg-[#21262d] text-[#586069] dark:text-[#8b949e] border-[rgba(27,31,35,.15)] dark:border-[#30363d] hover:bg-[#f3f4f6] dark:hover:bg-[#30363d] hover:text-[#24292e] dark:hover:text-[#c9d1d9]'
+    ? 'bg-[#1f6feb] text-white border-[#1f6feb]'
+    : 'bg-[#21262d] text-[#8b949e] border-[#30363d] hover:bg-[#30363d] hover:border-[#484f58] hover:text-[#c9d1d9]'
 
   return `${baseClasses} ${stateClasses}`
 }

@@ -116,18 +116,22 @@ export default function DirectorySwitcher({
     <div ref={dropdownRef} className="relative">
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center gap-2 px-3 py-1.5 text-sm text-white hover:bg-gray-700 rounded"
+        className="flex items-center gap-1.5 px-2.5 py-1 text-xs text-[#c9d1d9] bg-[#21262d] hover:bg-[#30363d] border border-[#30363d] hover:border-[#484f58] rounded transition-colors"
         title={currentDirectory}
       >
-        <span>📁</span>
-        <span>{truncatePath(currentDirectory, 30)}</span>
-        <span className="text-xs">▼</span>
+        <svg className="w-3.5 h-3.5 text-[#539bf5]" fill="currentColor" viewBox="0 0 16 16">
+          <path d="M1.75 1A1.75 1.75 0 000 2.75v10.5C0 14.216.784 15 1.75 15h12.5A1.75 1.75 0 0016 13.25v-8.5A1.75 1.75 0 0014.25 3H7.5a.25.25 0 01-.2-.1l-.9-1.2C6.07 1.26 5.55 1 5 1H1.75z"/>
+        </svg>
+        <span className="font-medium">{truncatePath(currentDirectory, 30)}</span>
+        <svg className="w-2.5 h-2.5 ml-0.5" fill="currentColor" viewBox="0 0 16 16">
+          <path d="M4 6l4 4 4-4z"/>
+        </svg>
       </button>
 
       {isOpen && (
-        <div className="absolute top-full left-0 mt-1 w-[500px] bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded shadow-lg z-50 max-h-[400px] overflow-auto">
+        <div className="absolute top-full left-0 mt-1 w-[500px] bg-[#ffffff] dark:bg-[#161b22] border border-[#d0d7de] dark:border-[#30363d] rounded-md shadow-xl z-50 max-h-[400px] overflow-auto">
           {/* Input Section */}
-          <div className="p-3 border-b border-gray-200 dark:border-gray-700">
+          <div className="p-3 border-b border-[#d0d7de] dark:border-[#30363d]">
             <div className="flex gap-2">
               <input
                 type="text"
@@ -135,28 +139,28 @@ export default function DirectorySwitcher({
                 onChange={(e) => setInputValue(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && handleInputChange()}
                 placeholder="Enter directory path..."
-                className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded text-sm dark:bg-gray-900 dark:text-white"
+                className="flex-1 px-3 py-1.5 border border-[#d0d7de] dark:border-[#30363d] rounded text-sm bg-[#ffffff] dark:bg-[#0d1117] text-[#24292f] dark:text-[#e6edf3] placeholder:text-[#57606a] dark:placeholder:text-[#7d8590] focus:border-[#0969da] dark:focus:border-[#1f6feb] focus:outline-none focus:ring-1 focus:ring-[#0969da] dark:focus:ring-[#1f6feb]"
               />
               <button
                 onClick={handleInputChange}
                 disabled={!inputValue || !!validationError || isValidating || isChanging}
-                className="px-4 py-2 bg-blue-600 text-white rounded text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-blue-700"
+                className="px-3 py-1.5 bg-[#1f6feb] text-white border border-[#1f6feb] rounded text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed hover:bg-[#1a7feb] transition-colors"
               >
                 {isChanging ? 'Changing...' : 'Change'}
               </button>
             </div>
             {isValidating && (
-              <div className="mt-2 text-xs text-gray-500">Validating...</div>
+              <div className="mt-2 text-xs text-[#57606a] dark:text-[#7d8590]">Validating...</div>
             )}
             {validationError && (
-              <div className="mt-2 text-xs text-red-600 dark:text-red-400">{validationError}</div>
+              <div className="mt-2 text-xs text-[#cf222e] dark:text-[#f85149]">{validationError}</div>
             )}
           </div>
 
           {/* Current Directory */}
-          <div className="p-2 border-b border-gray-200 dark:border-gray-700 bg-blue-50 dark:bg-blue-900/20">
-            <div className="text-xs text-gray-600 dark:text-gray-400 mb-1">Current Directory</div>
-            <div className="text-sm font-medium dark:text-white" title={currentDirectory}>
+          <div className="p-3 border-b border-[#d0d7de] dark:border-[#30363d] bg-[#ddf4ff] dark:bg-[#1c2d41]">
+            <div className="text-xs font-semibold text-[#57606a] dark:text-[#7d8590] mb-1">Current Directory</div>
+            <div className="text-sm font-medium text-[#0969da] dark:text-[#58a6ff]" title={currentDirectory}>
               {currentDirectory}
             </div>
           </div>
@@ -164,16 +168,16 @@ export default function DirectorySwitcher({
           {/* Recent Directories */}
           {recentDirs.length > 0 && (
             <div className="p-2">
-              <div className="text-xs text-gray-600 dark:text-gray-400 mb-2 px-2">Recent Directories</div>
+              <div className="text-xs font-semibold text-[#57606a] dark:text-[#7d8590] mb-2 px-2">Recent Directories</div>
               {recentDirs.map((dir: string) => (
                 <div
                   key={dir}
-                  className="flex items-center justify-between px-2 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded group"
+                  className="flex items-center justify-between px-2 py-1.5 hover:bg-[#f6f8fa] dark:hover:bg-[#21262d] rounded group transition-colors"
                 >
                   <button
                     onClick={() => handleDirectorySelect(dir)}
                     disabled={isChanging || dir === currentDirectory}
-                    className="flex-1 text-left text-sm dark:text-white truncate disabled:opacity-50"
+                    className="flex-1 text-left text-sm text-[#24292f] dark:text-[#e6edf3] truncate disabled:opacity-50 disabled:cursor-not-allowed"
                     title={dir}
                   >
                     {dir}
@@ -183,7 +187,7 @@ export default function DirectorySwitcher({
                       e.stopPropagation()
                       removeFromRecent(dir)
                     }}
-                    className="ml-2 px-2 py-1 text-red-600 hover:bg-red-100 dark:hover:bg-red-900/20 rounded opacity-0 group-hover:opacity-100 transition-opacity"
+                    className="ml-2 px-1.5 py-0.5 text-[#cf222e] dark:text-[#f85149] hover:bg-[#ffebe9] dark:hover:bg-[#3d1e20] rounded text-sm opacity-0 group-hover:opacity-100 transition-opacity"
                     title="Remove from recent"
                   >
                     ×
@@ -194,7 +198,7 @@ export default function DirectorySwitcher({
           )}
 
           {recentDirs.length === 0 && (
-            <div className="p-4 text-sm text-gray-500 dark:text-gray-400 text-center">
+            <div className="p-4 text-sm text-[#57606a] dark:text-[#7d8590] text-center">
               No recent directories
             </div>
           )}
