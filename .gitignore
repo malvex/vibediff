@@ -19,3 +19,8 @@ Thumbs.db
 
 # React build output
 web/dist/
+
+# Nix
+.direnv/
+result
+result-*

@@ -8,9 +8,11 @@ interface FileListProps {
   viewMode: 'list' | 'tree'
   collapsedFolders: Set<string>
   onToggleFolderCollapse: (folder: string) => void
+  reviewedFiles: Set<string>
+  onToggleReviewed: (filePath: string) => void
 }
 
-export default function FileList({ files, selectedFile, onSelectFile, displayMode, viewMode, collapsedFolders, onToggleFolderCollapse }: FileListProps): React.ReactElement {
+export default function FileList({ files, selectedFile, onSelectFile, displayMode, viewMode, collapsedFolders, onToggleFolderCollapse, reviewedFiles, onToggleReviewed }: FileListProps): React.ReactElement {
   const handleFileClick = (file: FileDiff): void => {
     onSelectFile(file)
 
@@ -99,7 +101,10 @@ export default function FileList({ files, selectedFile, onSelectFile, displayMod
         return (
           <div
             key={node.path}
-            onClick={() => { handleFileClick(file); }}
+            onClick={(e) => {
+              if (e.target instanceof HTMLInputElement) return
+              handleFileClick(file)
+            }}
             className={`flex items-center gap-2 px-2 py-1.5 rounded-md cursor-pointer text-[13px] break-all transition-colors
               ${selectedFile?.path === node.file.path
                 ? 'bg-[rgba(54,158,255,0.1)] dark:bg-[rgba(177,186,196,0.12)] border-l-[3px] border-l-[#2188ff] dark:border-l-[#f78166] -ml-[3px] pl-[calc(0.5rem-3px)]'
@@ -107,10 +112,25 @@ export default function FileList({ files, selectedFile, onSelectFile, displayMod
               }`}
             style={{ paddingLeft: `${String(depth * 20 + 8)}px` }}
           >
-            <span className="flex-1 min-w-0">{node.name}</span>
+            <input
+              type="checkbox"
+              checked={reviewedFiles.has(file.path)}
+              onChange={(e) => {
+                e.stopPropagation()
+                onToggleReviewed(file.path)
+              }}
+              onClick={(e) => { e.stopPropagation(); }}
+              className="w-4 h-4 rounded border-[#d0d7de] dark:border-[#30363d]
+                         text-[#2188ff] dark:text-[#58a6ff] cursor-pointer flex-shrink-0
+                         focus:ring-2 focus:ring-[#0969da] dark:focus:ring-[#1f6feb]"
+              title="Mark as reviewed"
+            />
+            <span className={`flex-1 min-w-0 ${reviewedFiles.has(file.path) ? 'opacity-60' : ''}`}>
+              {node.name}
+            </span>
             <div className="flex items-center gap-1 text-xs flex-shrink-0">
-              <span className="text-[#28a745] dark:text-[#2ea043]">+{node.file.additions}</span>
-              <span className="text-[#d73a49] dark:text-[#f85149]">-{node.file.deletions}</span>
+              <span className="text-[#28a745] dark:text-[#2ea043]">+{file.additions}</span>
+              <span className="text-[#d73a49] dark:text-[#f85149]">-{file.deletions}</span>
             </div>
           </div>
         )
@@ -154,14 +174,32 @@ export default function FileList({ files, selectedFile, onSelectFile, displayMod
       {files.map((file) => (
         <div
           key={file.path}
-          onClick={() => { handleFileClick(file); }}
+          onClick={(e) => {
+            if (e.target instanceof HTMLInputElement) return
+            handleFileClick(file)
+          }}
           className={`flex items-center gap-2 px-2 py-1.5 rounded-md cursor-pointer text-[13px] break-all transition-colors
             ${selectedFile?.path === file.path
               ? 'bg-[rgba(54,158,255,0.1)] dark:bg-[rgba(177,186,196,0.12)] border-l-[3px] border-l-[#2188ff] dark:border-l-[#f78166] -ml-[3px] pl-[calc(0.5rem-3px)]'
               : 'hover:bg-[#f0f3f6] dark:hover:bg-[rgba(255,255,255,0.05)]'
             }`}
         >
-          <span className="flex-1 min-w-0">{file.path}</span>
+          <input
+            type="checkbox"
+            checked={reviewedFiles.has(file.path)}
+            onChange={(e) => {
+              e.stopPropagation()
+              onToggleReviewed(file.path)
+            }}
+            onClick={(e) => { e.stopPropagation(); }}
+            className="w-4 h-4 rounded border-[#d0d7de] dark:border-[#30363d]
+                       text-[#2188ff] dark:text-[#58a6ff] cursor-pointer flex-shrink-0
+                       focus:ring-2 focus:ring-[#0969da] dark:focus:ring-[#1f6feb]"
+            title="Mark as reviewed"
+          />
+          <span className={`flex-1 min-w-0 ${reviewedFiles.has(file.path) ? 'opacity-60' : ''}`}>
+            {file.path}
+          </span>
           <div className="flex items-center gap-1 text-xs flex-shrink-0">
             <span className="text-[#28a745] dark:text-[#2ea043]">+{file.additions}</span>
             <span className="text-[#d73a49] dark:text-[#f85149]">-{file.deletions}</span>
