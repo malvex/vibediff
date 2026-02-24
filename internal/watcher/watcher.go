@@ -14,6 +14,7 @@ type GitWatcher struct {
 	lastStatus   string
 	pollInterval time.Duration
 	done         chan bool
+	workingDir   string
 }
 
 // ChangeNotifier interface for notifying changes
@@ -62,7 +63,13 @@ func (w *GitWatcher) Stop() {
 
 func (w *GitWatcher) checkForChanges() {
 	// Get current git status
-	cmd := exec.Command("git", "status", "--porcelain")
+	var cmd *exec.Cmd
+	if w.workingDir != "" {
+		cmd = exec.Command("git", "-C", w.workingDir, "status", "--porcelain")
+	} else {
+		cmd = exec.Command("git", "status", "--porcelain")
+	}
+
 	output, err := cmd.Output()
 	if err != nil {
 		if os.Getenv("VIBEDIFF_DEBUG") == "true" {
@@ -88,4 +95,10 @@ func (w *GitWatcher) checkForChanges() {
 		// Notify about the change
 		w.hub.NotifyChange(changeType)
 	}
+}
+
+// SetWorkingDir changes the working directory for git commands
+func (w *GitWatcher) SetWorkingDir(dir string) {
+	w.workingDir = dir
+	w.lastStatus = "" // Reset to trigger update
 }

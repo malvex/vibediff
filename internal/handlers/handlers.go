@@ -17,12 +17,14 @@ type Handler struct {
 	gitService  *git.Service
 	reviewStore *review.Store
 	format      string
+	watcher     interface{ SetWorkingDir(string) }
 }
 
-func NewHandler(gitService *git.Service, reviewStore *review.Store) *Handler {
+func NewHandler(gitService *git.Service, reviewStore *review.Store, watcher interface{ SetWorkingDir(string) }) *Handler {
 	return &Handler{
 		gitService:  gitService,
 		reviewStore: reviewStore,
+		watcher:     watcher,
 	}
 }
 
@@ -165,4 +167,50 @@ func (h *Handler) GetFileContent(w http.ResponseWriter, r *http.Request) {
 	if _, err := w.Write([]byte(content)); err != nil {
 		log.Printf("Failed to write file content: %v", err)
 	}
+}
+
+// GetDirectory returns the current working directory
+func (h *Handler) GetDirectory(w http.ResponseWriter, r *http.Request) {
+	dir := h.gitService.GetWorkingDir()
+	h.writeJSON(w, map[string]string{"directory": dir})
+}
+
+// SetDirectory changes the working directory
+func (h *Handler) SetDirectory(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		Directory string `json:"directory"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	if err := h.gitService.SetWorkingDir(req.Directory); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	h.watcher.SetWorkingDir(req.Directory)
+
+	h.writeJSON(w, map[string]string{"directory": req.Directory})
+}
+
+// ValidateDirectory validates a directory is a git repo
+func (h *Handler) ValidateDirectory(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		Directory string `json:"directory"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	err := h.gitService.ValidateGitRepo(req.Directory)
+	result := map[string]interface{}{
+		"valid": err == nil,
+	}
+	if err != nil {
+		result["error"] = err.Error()
+	}
+	h.writeJSON(w, result)
 }

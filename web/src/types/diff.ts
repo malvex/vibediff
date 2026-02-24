@@ -44,3 +44,12 @@ export interface Comment {
   content: string
   createdAt: string
 }
+
+export interface DirectoryInfo {
+  directory: string
+}
+
+export interface DirectoryValidation {
+  valid: boolean
+  error?: string
+}

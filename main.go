@@ -96,8 +96,6 @@ func main() {
 
 	gitService := git.NewService()
 	gitService.SetDiffTarget(target)
-	handler := handlers.NewHandler(gitService, reviewStore)
-	handler.SetFormat(*format)
 
 	// Create WebSocket hub
 	wsHub := handlers.NewWSHub()
@@ -107,6 +105,9 @@ func main() {
 	gitWatcher := watcher.NewGitWatcher(wsHub)
 	gitWatcher.Start()
 
+	handler := handlers.NewHandler(gitService, reviewStore, gitWatcher)
+	handler.SetFormat(*format)
+
 	r := mux.NewRouter()
 
 	r.HandleFunc("/api/diff", handler.GetDiff).Methods("GET")
@@ -115,6 +116,11 @@ func main() {
 	r.HandleFunc("/api/review/comment", handler.AddComment).Methods("POST")
 	r.HandleFunc("/api/review/comments", handler.GetComments).Methods("GET")
 	r.HandleFunc("/api/review/comment/{id}", handler.DeleteComment).Methods("DELETE")
+
+	// Directory management endpoints
+	r.HandleFunc("/api/directory", handler.GetDirectory).Methods("GET")
+	r.HandleFunc("/api/directory", handler.SetDirectory).Methods("POST")
+	r.HandleFunc("/api/directory/validate", handler.ValidateDirectory).Methods("POST")
 
 	// WebSocket endpoint for live updates
 	r.HandleFunc("/api/ws", handler.HandleWebSocket(wsHub)).Methods("GET")

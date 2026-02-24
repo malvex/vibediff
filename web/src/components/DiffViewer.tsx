@@ -4,12 +4,14 @@ import { useDiff } from '../hooks/useDiff'
 import { useComments } from '../hooks/useComments'
 import { useLocalStorage } from '../hooks/useLocalStorage'
 import { useWebSocketUpdates } from '../contexts/WebSocketContext'
+import { useDirectory } from '../hooks/useDirectory'
 import { getButtonClassName } from '../utils/buttonStyles'
 import FileList from './FileList'
 import FileDiff from './FileDiff'
 import CommentDialog from './CommentDialog'
 import FullFileModal from './FullFileModal'
 import DarkModeToggle from './DarkModeToggle'
+import DirectorySwitcher from './DirectorySwitcher'
 
 interface DiffViewerProps {
   className?: string
@@ -32,6 +34,7 @@ export default function DiffViewer({ className = '' }: DiffViewerProps): React.R
   const { data, loading, error, refetch } = useDiff(diffType)
   const { addComment, deleteComment, getCommentsForLine, getCommentRangeLines } = useComments()
   const { lastUpdate } = useWebSocketUpdates()
+  const { currentDirectory, changeDirectory, validateDirectory } = useDirectory()
 
   // Refetch when WebSocket triggers an update
   useEffect(() => {
@@ -174,6 +177,11 @@ export default function DiffViewer({ className = '' }: DiffViewerProps): React.R
     })
   }
 
+  const handleDirectoryChange = async (dir: string): Promise<void> => {
+    await changeDirectory(dir)
+    refetch()
+  }
+
   if (loading) {
     return (
       <div className={`flex justify-center items-center h-screen ${className}`}>
@@ -198,8 +206,13 @@ export default function DiffViewer({ className = '' }: DiffViewerProps): React.R
       <header className="bg-[#24292e] dark:bg-[#161b22] text-white border-b border-[#e1e4e8] dark:border-[#30363d]">
         <div className="max-w-[1280px] mx-auto px-4 py-4">
           <div className="flex items-center justify-between flex-nowrap">
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-3">
               <h1 className="text-xl font-semibold">VibeDiff</h1>
+              <DirectorySwitcher
+                currentDirectory={currentDirectory}
+                onDirectoryChange={handleDirectoryChange}
+                onValidate={validateDirectory}
+              />
               {isRefreshing && (
                 <span className="text-sm text-gray-400 animate-pulse">Updating...</span>
               )}

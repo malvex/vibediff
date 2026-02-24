@@ -3,12 +3,14 @@ package git
 import (
 	"bytes"
 	"fmt"
+	"os"
 	"os/exec"
 	"strings"
 )
 
 type Service struct{
 	diffTarget string
+	workingDir string  // empty string means use process cwd
 }
 
 func NewService() *Service {
@@ -95,7 +97,14 @@ func (s *Service) GetStatus() ([]string, error) {
 }
 
 func (s *Service) runGitCommand(args ...string) (string, error) {
-	cmd := exec.Command("git", args...)
+	var cmdArgs []string
+	if s.workingDir != "" {
+		cmdArgs = append([]string{"-C", s.workingDir}, args...)
+	} else {
+		cmdArgs = args
+	}
+
+	cmd := exec.Command("git", cmdArgs...)
 	var out bytes.Buffer
 	var stderr bytes.Buffer
 	cmd.Stdout = &out
@@ -200,7 +209,7 @@ func (s *Service) getUntrackedFileDiff(filepath string, contextLines int) (*File
 	}
 
 	lines := strings.Split(string(content), "\n")
-	
+
 	// Create diff lines showing all lines as added
 	var diffLines []Line
 	for i, line := range lines {
@@ -229,4 +238,33 @@ func (s *Service) getUntrackedFileDiff(filepath string, contextLines int) (*File
 			},
 		},
 	}, nil
+}
+
+// SetWorkingDir changes the working directory for git commands
+func (s *Service) SetWorkingDir(dir string) error {
+	if err := s.ValidateGitRepo(dir); err != nil {
+		return err
+	}
+	s.workingDir = dir
+	return nil
+}
+
+// GetWorkingDir returns the current working directory
+func (s *Service) GetWorkingDir() string {
+	if s.workingDir != "" {
+		return s.workingDir
+	}
+	if cwd, err := os.Getwd(); err == nil {
+		return cwd
+	}
+	return ""
+}
+
+// ValidateGitRepo checks if the directory is a valid git repository
+func (s *Service) ValidateGitRepo(dir string) error {
+	cmd := exec.Command("git", "-C", dir, "rev-parse", "--git-dir")
+	if err := cmd.Run(); err != nil {
+		return fmt.Errorf("not a git repository: %s", dir)
+	}
+	return nil
 }
