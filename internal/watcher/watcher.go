@@ -5,6 +5,7 @@ import (
 	"os"
 	"os/exec"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -15,6 +16,7 @@ type GitWatcher struct {
 	pollInterval time.Duration
 	done         chan bool
 	workingDir   string
+	mu           sync.Mutex
 }
 
 // ChangeNotifier interface for notifying changes
@@ -62,10 +64,15 @@ func (w *GitWatcher) Stop() {
 }
 
 func (w *GitWatcher) checkForChanges() {
+	// Snapshot the current working directory under lock
+	w.mu.Lock()
+	dir := w.workingDir
+	w.mu.Unlock()
+
 	// Get current git status
 	var cmd *exec.Cmd
-	if w.workingDir != "" {
-		cmd = exec.Command("git", "-C", w.workingDir, "status", "--porcelain")
+	if dir != "" {
+		cmd = exec.Command("git", "-C", dir, "status", "--porcelain")
 	} else {
 		cmd = exec.Command("git", "status", "--porcelain")
 	}
@@ -79,6 +86,14 @@ func (w *GitWatcher) checkForChanges() {
 	}
 
 	currentStatus := string(output)
+
+	w.mu.Lock()
+	defer w.mu.Unlock()
+
+	// If the directory changed while we were running git, discard stale result
+	if w.workingDir != dir {
+		return
+	}
 
 	// Check if status changed
 	if currentStatus != w.lastStatus {
@@ -99,6 +114,8 @@ func (w *GitWatcher) checkForChanges() {
 
 // SetWorkingDir changes the working directory for git commands
 func (w *GitWatcher) SetWorkingDir(dir string) {
+	w.mu.Lock()
+	defer w.mu.Unlock()
 	w.workingDir = dir
 	w.lastStatus = "" // Reset to trigger update
 }
