@@ -8,6 +8,14 @@ const (
 	DiffTypeAll      DiffType = "all"
 )
 
+// VCSBackend represents the version control system being used
+type VCSBackend string
+
+const (
+	BackendGit VCSBackend = "git"
+	BackendJJ  VCSBackend = "jj"
+)
+
 type FileDiff struct {
 	Path      string     `json:"path"`
 	OldPath   string     `json:"oldPath,omitempty"`

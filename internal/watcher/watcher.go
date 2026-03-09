@@ -3,19 +3,21 @@ package watcher
 import (
 	"log"
 	"os"
-	"os/exec"
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/malvex/vibediff/internal/git"
 )
 
-// GitWatcher monitors git status for changes
+// GitWatcher monitors VCS status for changes
 type GitWatcher struct {
 	hub          ChangeNotifier
 	lastStatus   string
 	pollInterval time.Duration
 	done         chan bool
 	workingDir   string
+	backend      git.VCSBackend
 	mu           sync.Mutex
 }
 
@@ -24,12 +26,13 @@ type ChangeNotifier interface {
 	NotifyChange(changeType string)
 }
 
-// NewGitWatcher creates a new git watcher
-func NewGitWatcher(hub ChangeNotifier) *GitWatcher {
+// NewGitWatcher creates a new VCS watcher
+func NewGitWatcher(hub ChangeNotifier, backend git.VCSBackend) *GitWatcher {
 	return &GitWatcher{
 		hub:          hub,
 		pollInterval: 1 * time.Second,
 		done:         make(chan bool),
+		backend:      backend,
 	}
 }
 
@@ -45,7 +48,7 @@ func (w *GitWatcher) Start() {
 				w.checkForChanges()
 			case <-w.done:
 				if os.Getenv("VIBEDIFF_DEBUG") == "true" {
-					log.Println("Git watcher stopped")
+					log.Println("VCS watcher stopped")
 				}
 				return
 			}
@@ -64,33 +67,34 @@ func (w *GitWatcher) Stop() {
 }
 
 func (w *GitWatcher) checkForChanges() {
-	// Snapshot the current working directory under lock
 	w.mu.Lock()
 	dir := w.workingDir
+	backend := w.backend
 	w.mu.Unlock()
 
-	// Get current git status
-	var cmd *exec.Cmd
+	// Create a temporary service to get raw status
+	svc := git.NewService()
 	if dir != "" {
-		cmd = exec.Command("git", "-C", dir, "status", "--porcelain")
-	} else {
-		cmd = exec.Command("git", "status", "--porcelain")
+		// We just need to set the working dir field without validation
+		// Use a simple approach: set backend and get status
+		svc.SetWorkingDirUnsafe(dir)
 	}
+	svc.SetBackend(backend)
 
-	output, err := cmd.Output()
+	output, err := svc.StatusRaw()
 	if err != nil {
 		if os.Getenv("VIBEDIFF_DEBUG") == "true" {
-			log.Printf("Error checking git status: %v", err)
+			log.Printf("Error checking VCS status: %v", err)
 		}
 		return
 	}
 
-	currentStatus := string(output)
+	currentStatus := output
 
 	w.mu.Lock()
 	defer w.mu.Unlock()
 
-	// If the directory changed while we were running git, discard stale result
+	// If the directory changed while we were running, discard stale result
 	if w.workingDir != dir {
 		return
 	}
@@ -101,21 +105,36 @@ func (w *GitWatcher) checkForChanges() {
 
 		// Determine change type
 		changeType := "file_changed"
-		if strings.Contains(currentStatus, "??") {
-			changeType = "file_added"
-		} else if strings.Contains(currentStatus, " D ") {
-			changeType = "file_deleted"
+		if backend == git.BackendJJ {
+			if strings.Contains(currentStatus, "A ") {
+				changeType = "file_added"
+			} else if strings.Contains(currentStatus, "D ") {
+				changeType = "file_deleted"
+			}
+		} else {
+			if strings.Contains(currentStatus, "??") {
+				changeType = "file_added"
+			} else if strings.Contains(currentStatus, " D ") {
+				changeType = "file_deleted"
+			}
 		}
 
-		// Notify about the change
 		w.hub.NotifyChange(changeType)
 	}
 }
 
-// SetWorkingDir changes the working directory for git commands
+// SetWorkingDir changes the working directory for VCS commands
 func (w *GitWatcher) SetWorkingDir(dir string) {
 	w.mu.Lock()
 	defer w.mu.Unlock()
 	w.workingDir = dir
+	w.lastStatus = "" // Reset to trigger update
+}
+
+// SetBackend changes the VCS backend
+func (w *GitWatcher) SetBackend(backend git.VCSBackend) {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	w.backend = backend
 	w.lastStatus = "" // Reset to trigger update
 }

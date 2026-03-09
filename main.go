@@ -97,12 +97,19 @@ func main() {
 	gitService := git.NewService()
 	gitService.SetDiffTarget(target)
 
+	// Detect VCS backend (jj or git)
+	backend := gitService.DetectBackend()
+	gitService.SetBackend(backend)
+	if backend == git.BackendJJ {
+		fmt.Fprintln(os.Stderr, "Detected jj repository")
+	}
+
 	// Create WebSocket hub
 	wsHub := handlers.NewWSHub()
 	go wsHub.Run()
 
 	// Start file watcher
-	gitWatcher := watcher.NewGitWatcher(wsHub)
+	gitWatcher := watcher.NewGitWatcher(wsHub, backend)
 	gitWatcher.Start()
 
 	handler := handlers.NewHandler(gitService, reviewStore, gitWatcher)

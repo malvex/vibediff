@@ -17,10 +17,16 @@ type Handler struct {
 	gitService  *git.Service
 	reviewStore *review.Store
 	format      string
-	watcher     interface{ SetWorkingDir(string) }
+	watcher     interface {
+		SetWorkingDir(string)
+		SetBackend(git.VCSBackend)
+	}
 }
 
-func NewHandler(gitService *git.Service, reviewStore *review.Store, watcher interface{ SetWorkingDir(string) }) *Handler {
+func NewHandler(gitService *git.Service, reviewStore *review.Store, watcher interface {
+	SetWorkingDir(string)
+	SetBackend(git.VCSBackend)
+}) *Handler {
 	return &Handler{
 		gitService:  gitService,
 		reviewStore: reviewStore,
@@ -191,11 +197,12 @@ func (h *Handler) SetDirectory(w http.ResponseWriter, r *http.Request) {
 	}
 
 	h.watcher.SetWorkingDir(req.Directory)
+	h.watcher.SetBackend(h.gitService.GetBackend())
 
 	h.writeJSON(w, map[string]string{"directory": req.Directory})
 }
 
-// ValidateDirectory validates a directory is a git repo
+// ValidateDirectory validates a directory is a git or jj repo
 func (h *Handler) ValidateDirectory(w http.ResponseWriter, r *http.Request) {
 	var req struct {
 		Directory string `json:"directory"`
