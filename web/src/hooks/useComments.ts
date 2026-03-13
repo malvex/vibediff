@@ -7,6 +7,7 @@ interface UseCommentsReturn {
   deleteComment: (id: string) => Promise<void>
   getCommentsForLine: (file: string, line: number) => Comment[]
   getCommentRangeLines: (file: string, lineOrder: number[]) => Set<number>
+  formatCommentsForExport: () => string
 }
 
 export function useComments(): UseCommentsReturn {
@@ -87,11 +88,36 @@ export function useComments(): UseCommentsReturn {
     return result
   }, [comments])
 
+  const formatCommentsForExport = useCallback(() => {
+    if (comments.length === 0) return ''
+
+    // Group comments by file
+    const byFile = new Map<string, Comment[]>()
+    for (const c of comments) {
+      const list = byFile.get(c.file) ?? []
+      list.push(c)
+      byFile.set(c.file, list)
+    }
+
+    const lines: string[] = ['# Review Comments', '']
+    for (const [file, fileComments] of byFile) {
+      lines.push(`## ${file}`)
+      for (const c of fileComments) {
+        const lineRef = c.line === c.lineEnd ? `Line ${c.line}` : `Lines ${c.line}-${c.lineEnd}`
+        lines.push(`- **${lineRef}**: ${c.content}`)
+      }
+      lines.push('')
+    }
+
+    return lines.join('\n')
+  }, [comments])
+
   return {
     comments,
     addComment,
     deleteComment,
     getCommentsForLine,
-    getCommentRangeLines
+    getCommentRangeLines,
+    formatCommentsForExport
   }
 }

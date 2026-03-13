@@ -38,7 +38,8 @@ export default function DiffViewer({ className = '' }: DiffViewerProps): React.R
   const [selectedRevision, setSelectedRevision] = useState<string | null>(null)
 
   const { data, loading, error, refetch } = useDiff(diffType, selectedRevision)
-  const { addComment, deleteComment, getCommentsForLine, getCommentRangeLines } = useComments()
+  const { comments, addComment, deleteComment, getCommentsForLine, getCommentRangeLines, formatCommentsForExport } = useComments()
+  const [copyFeedback, setCopyFeedback] = useState(false)
   const { lastUpdate } = useWebSocketUpdates()
   const { currentDirectory, changeDirectory, validateDirectory } = useDirectory()
   const { reviewedFiles, toggleReviewed, clearReviewed, validateReviewed } = useReviewedFiles(currentDirectory)
@@ -291,6 +292,21 @@ export default function DiffViewer({ className = '' }: DiffViewerProps): React.R
             >
               Wrap Lines
             </button>
+
+            {comments.length > 0 && (
+              <button
+                onClick={() => {
+                  void navigator.clipboard.writeText(formatCommentsForExport()).then(() => {
+                    setCopyFeedback(true)
+                    setTimeout(() => { setCopyFeedback(false); }, 1500)
+                  })
+                }}
+                className={getButtonClassName(false, 'single')}
+                title="Copy all review comments as markdown"
+              >
+                {copyFeedback ? 'Copied!' : `Copy Comments (${comments.length})`}
+              </button>
+            )}
 
             <DarkModeToggle />
             </div>
