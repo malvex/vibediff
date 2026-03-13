@@ -452,6 +452,8 @@ export default function DiffViewer({ className = '' }: DiffViewerProps): React.R
                 getCommentRangeLines={getCommentRangeLines}
                 onDeleteComment={deleteComment}
                 wrapLines={wrapLines}
+                diffType={diffType}
+                selectedRevision={selectedRevision}
               />
             ))}
           </div>
@@ -471,6 +473,8 @@ export default function DiffViewer({ className = '' }: DiffViewerProps): React.R
               getCommentRangeLines={getCommentRangeLines}
               onDeleteComment={deleteComment}
               wrapLines={wrapLines}
+              diffType={diffType}
+              selectedRevision={selectedRevision}
             />
           </div>
             )

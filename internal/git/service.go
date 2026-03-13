@@ -319,6 +319,20 @@ func (s *Service) GetFileDiffWithFullContext(filename string, diffType DiffType)
 	return s.GetFileDiff(filename, diffType, 999999)
 }
 
+// GetRevisionFileDiffWithFullContext returns a file diff with full context for a specific revision
+func (s *Service) GetRevisionFileDiffWithFullContext(filename string, revisionID string) (*FileDiff, error) {
+	diff, err := s.GetRevisionDiff(revisionID, 999999)
+	if err != nil {
+		return nil, err
+	}
+	for _, file := range diff.Files {
+		if file.Path == filename {
+			return &file, nil
+		}
+	}
+	return nil, fmt.Errorf("file not found in revision diff: %s", filename)
+}
+
 // getUntrackedFiles returns list of untracked files from git status
 func (s *Service) getUntrackedFiles() ([]string, error) {
 	output, err := s.runGitCommand("ls-files", "--others", "--exclude-standard")

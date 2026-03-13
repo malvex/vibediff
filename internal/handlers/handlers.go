@@ -176,6 +176,17 @@ func (h *Handler) GetFullFileWithDiff(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	revision := r.URL.Query().Get("revision")
+	if revision != "" {
+		diff, err := h.gitService.GetRevisionFileDiffWithFullContext(filename, revision)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		h.writeJSON(w, diff)
+		return
+	}
+
 	diffType := git.DiffType(r.URL.Query().Get("type"))
 	if diffType == "" {
 		diffType = git.DiffTypeAll

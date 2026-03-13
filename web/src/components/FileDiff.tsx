@@ -1,5 +1,5 @@
-import React, { useMemo, useCallback } from 'react'
-import type { FileDiff as FileDiffType, ViewMode, DiffLine as DiffLineType, Comment } from '../types/diff'
+import React, { useMemo, useCallback, useState, useEffect } from 'react'
+import type { FileDiff as FileDiffType, ViewMode, DiffLine as DiffLineType, DiffType, Comment, Hunk } from '../types/diff'
 import DiffLine from './DiffLine'
 import CommentDisplay from './CommentDisplay'
 import { useRangeSelection } from '../hooks/useRangeSelection'
@@ -8,6 +8,29 @@ interface SplitViewLineResult {
   line: React.ReactNode
   comments: Comment[]
   lineNumber: number
+}
+
+interface ExpandRowProps {
+  onClick: () => void
+  lines: number
+  colSpan: number
+  isLoading: boolean
+}
+
+function ExpandRow({ onClick, lines, colSpan, isLoading }: ExpandRowProps): React.ReactElement {
+  return (
+    <tr
+      className="cursor-pointer hover:bg-[#ddf4ff] dark:hover:bg-[#1a3a5c] transition-colors"
+      onClick={onClick}
+    >
+      <td
+        colSpan={colSpan}
+        className="px-[10px] py-1 text-xs font-mono text-center text-[#0969da] dark:text-[#58a6ff] bg-[#f6f8fa] dark:bg-[#161b22] border-y border-[#d0d7de] dark:border-[#30363d]"
+      >
+        {isLoading ? 'Loading...' : `↕ Expand ${String(lines)} hidden lines`}
+      </td>
+    </tr>
+  )
 }
 
 interface FileDiffProps {
@@ -22,6 +45,8 @@ interface FileDiffProps {
   onDeleteComment: (id: string) => Promise<void>
   hideViewFullFile?: boolean
   wrapLines?: boolean
+  diffType?: DiffType
+  selectedRevision?: string | null
 }
 
 export default function FileDiff({
@@ -35,17 +60,83 @@ export default function FileDiff({
   getCommentRangeLines,
   onDeleteComment,
   hideViewFullFile = false,
-  wrapLines = false
+  wrapLines = false,
+  diffType = 'all',
+  selectedRevision = null
 }: FileDiffProps): React.ReactElement {
+  const [expandedHunks, setExpandedHunks] = useState<Hunk[] | null>(null)
+  const [isExpanding, setIsExpanding] = useState(false)
+
+  // Reset expanded state when the file changes (e.g. after refetch)
+  useEffect(() => {
+    setExpandedHunks(null)
+  }, [file])
+
+  const displayHunks = expandedHunks ?? file.hunks
+
+  const handleExpand = useCallback(async () => {
+    if (isExpanding || expandedHunks) return
+    setIsExpanding(true)
+    try {
+      const params = new URLSearchParams()
+      if (selectedRevision) {
+        params.set('revision', selectedRevision)
+      } else {
+        params.set('type', diffType)
+      }
+      const encodedPath = encodeURIComponent(file.path)
+      const response = await fetch(`/api/diff/${encodedPath}/full?${params.toString()}`)
+      if (response.ok) {
+        const fullDiff = await response.json() as FileDiffType
+        setExpandedHunks(fullDiff.hunks)
+      }
+    } catch (err) {
+      console.error('Failed to expand context:', err)
+    } finally {
+      setIsExpanding(false)
+    }
+  }, [isExpanding, expandedHunks, selectedRevision, diffType, file.path])
+
+  // Compute gaps between hunks for expand buttons
+  const gaps = useMemo(() => {
+    const result: { before: number; between: { index: number; lines: number }[] } = {
+      before: 0,
+      between: []
+    }
+    if (expandedHunks) return result // No gaps when expanded
+
+    const hunks = file.hunks
+    if (hunks.length === 0) return result
+
+    // Gap before first hunk
+    const firstStart = Math.max(hunks[0].newStart, hunks[0].oldStart)
+    if (firstStart > 1) {
+      result.before = firstStart - 1
+    }
+
+    // Gaps between hunks
+    for (let i = 0; i < hunks.length - 1; i++) {
+      const current = hunks[i]
+      const next = hunks[i + 1]
+      const currentEnd = current.newStart + current.newLines
+      const gap = next.newStart - currentEnd
+      if (gap > 0) {
+        result.between.push({ index: i, lines: gap })
+      }
+    }
+
+    return result
+  }, [file.hunks, expandedHunks])
+
   const lineOrder = useMemo(() =>
-    file.hunks.flatMap(hunk =>
+    displayHunks.flatMap(hunk =>
       hunk.lines.map(line => {
         const isDel = line.type === 'delete' || line.type === 'deleted'
         return isDel
           ? -(line.oldLineNumber ?? line.oldNumber ?? 0)
           : (line.newLineNumber ?? line.newNumber ?? 0)
       })
-    ), [file.hunks])
+    ), [displayHunks])
 
   const commentRangeLines = useMemo(() =>
     getCommentRangeLines ? getCommentRangeLines(file.path, lineOrder) : new Set<number>()
@@ -111,8 +202,13 @@ export default function FileDiff({
           {viewMode === 'unified' ? (
             <table className="diff-table w-full">
               <tbody>
-                {file.hunks.map((hunk, hunkIndex) => (
+                {displayHunks.map((hunk, hunkIndex) => (
                   <React.Fragment key={hunkIndex}>
+                    {/* Expand row before first hunk */}
+                    {hunkIndex === 0 && gaps.before > 0 && (
+                      <ExpandRow onClick={() => { void handleExpand() }} lines={gaps.before} colSpan={3} isLoading={isExpanding} />
+                    )}
+
                     {/* Hunk Header */}
                     <tr>
                       <td colSpan={3} className="px-[10px] py-1 text-xs font-mono text-left" style={{ backgroundColor: 'var(--color-hunk-bg)', color: 'var(--color-hunk-text)' }}>
@@ -153,6 +249,12 @@ export default function FileDiff({
                         </React.Fragment>
                       )
                     })}
+
+                    {/* Expand row between hunks */}
+                    {(() => {
+                      const gap = gaps.between.find(g => g.index === hunkIndex)
+                      return gap ? <ExpandRow onClick={() => { void handleExpand() }} lines={gap.lines} colSpan={3} isLoading={isExpanding} /> : null
+                    })()}
                   </React.Fragment>
                 ))}
               </tbody>
@@ -160,8 +262,13 @@ export default function FileDiff({
           ) : (
             <table className="split-diff-table w-full">
               <tbody>
-                {file.hunks.map((hunk, hunkIndex) => (
+                {displayHunks.map((hunk, hunkIndex) => (
                   <React.Fragment key={hunkIndex}>
+                    {/* Expand row before first hunk */}
+                    {hunkIndex === 0 && gaps.before > 0 && (
+                      <ExpandRow onClick={() => { void handleExpand() }} lines={gaps.before} colSpan={4} isLoading={isExpanding} />
+                    )}
+
                     {/* Hunk Header */}
                     <tr>
                       <td colSpan={4} className="px-[10px] py-1 text-xs font-mono text-left" style={{ backgroundColor: 'var(--color-hunk-bg)', color: 'var(--color-hunk-text)' }}>
@@ -195,6 +302,12 @@ export default function FileDiff({
                         lineNumber
                       }
                     }, onDeleteComment)}
+
+                    {/* Expand row between hunks */}
+                    {(() => {
+                      const gap = gaps.between.find(g => g.index === hunkIndex)
+                      return gap ? <ExpandRow onClick={() => { void handleExpand() }} lines={gap.lines} colSpan={4} isLoading={isExpanding} /> : null
+                    })()}
                   </React.Fragment>
                 ))}
               </tbody>
