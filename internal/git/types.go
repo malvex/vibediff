@@ -63,3 +63,12 @@ type DiffResult struct {
 	Files []FileDiff `json:"files"`
 	Type  DiffType   `json:"type"`
 }
+
+// Revision represents a single commit/revision in the VCS history
+type Revision struct {
+	ID          string `json:"id"`
+	ShortID     string `json:"shortId"`
+	Description string `json:"description"`
+	Author      string `json:"author"`
+	Timestamp   string `json:"timestamp"`
+}

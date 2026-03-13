@@ -383,6 +383,141 @@ func (s *Service) getUntrackedFileDiff(filepath string, contextLines int) (*File
 	}, nil
 }
 
+// GetRevisions returns recent revisions/commits
+func (s *Service) GetRevisions(limit int) ([]Revision, error) {
+	if limit <= 0 {
+		limit = 50
+	}
+	if s.backend == BackendJJ {
+		return s.getJJRevisions(limit)
+	}
+	return s.getGitRevisions(limit)
+}
+
+func (s *Service) getGitRevisions(limit int) ([]Revision, error) {
+	output, err := s.runGitCommand("log", fmt.Sprintf("--format=format:%%H\x00%%h\x00%%s\x00%%an\x00%%aI"), fmt.Sprintf("-n%d", limit))
+	if err != nil {
+		return nil, fmt.Errorf("failed to get git log: %w", err)
+	}
+
+	if output == "" {
+		return []Revision{}, nil
+	}
+
+	lines := strings.Split(strings.TrimSpace(output), "\n")
+	var revisions []Revision
+	for _, line := range lines {
+		parts := strings.SplitN(line, "\x00", 5)
+		if len(parts) < 5 {
+			continue
+		}
+		revisions = append(revisions, Revision{
+			ID:          parts[0],
+			ShortID:     parts[1],
+			Description: parts[2],
+			Author:      parts[3],
+			Timestamp:   parts[4],
+		})
+	}
+
+	return revisions, nil
+}
+
+func (s *Service) getJJRevisions(limit int) ([]Revision, error) {
+	template := `change_id ++ "\x00" ++ change_id.shortest(8) ++ "\x00" ++ description.first_line() ++ "\x00" ++ author.name() ++ "\x00" ++ author.timestamp() ++ "\n"`
+	output, err := s.runJJCommand("log", "--no-graph", "-r", fmt.Sprintf("ancestors(@, %d)", limit), "-T", template)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get jj log: %w", err)
+	}
+
+	if output == "" {
+		return []Revision{}, nil
+	}
+
+	lines := strings.Split(strings.TrimSpace(output), "\n")
+	var revisions []Revision
+	for _, line := range lines {
+		if line == "" {
+			continue
+		}
+		parts := strings.SplitN(line, "\x00", 5)
+		if len(parts) < 5 {
+			continue
+		}
+		revisions = append(revisions, Revision{
+			ID:          parts[0],
+			ShortID:     parts[1],
+			Description: parts[2],
+			Author:      parts[3],
+			Timestamp:   parts[4],
+		})
+	}
+
+	return revisions, nil
+}
+
+// GetRevisionDiff returns the diff for a specific revision
+func (s *Service) GetRevisionDiff(revisionID string, contextLines ...int) (*DiffResult, error) {
+	context := 3
+	if len(contextLines) > 0 {
+		context = contextLines[0]
+	}
+
+	if s.backend == BackendJJ {
+		return s.getJJRevisionDiff(revisionID, context)
+	}
+	return s.getGitRevisionDiff(revisionID, context)
+}
+
+func (s *Service) getGitRevisionDiff(revisionID string, context int) (*DiffResult, error) {
+	args := []string{"diff", revisionID + "~1", revisionID, "--no-color", "--no-ext-diff"}
+	if context >= 0 {
+		args = append(args, fmt.Sprintf("-U%d", context))
+	}
+
+	output, err := s.runGitCommand(args...)
+	if err != nil {
+		// Fallback for initial commit (no parent)
+		args = []string{"diff", "--no-color", "--no-ext-diff", fmt.Sprintf("-U%d", context), "4b825dc642cb6eb9a060e54bf899d69f82cf7256", revisionID}
+		output, err = s.runGitCommand(args...)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get revision diff: %w", err)
+		}
+	}
+
+	files, err := s.parseDiff(output)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse diff: %w", err)
+	}
+
+	return &DiffResult{
+		Files: files,
+		Type:  DiffTypeAll,
+	}, nil
+}
+
+func (s *Service) getJJRevisionDiff(revisionID string, context int) (*DiffResult, error) {
+	args := []string{"diff", "--git", "-r", revisionID}
+	if context >= 0 {
+		args = append(args, fmt.Sprintf("--context=%d", context))
+	}
+
+	output, err := s.runJJCommand(args...)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get jj revision diff: %w", err)
+	}
+
+	files, err := s.parseDiff(output)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse diff: %w", err)
+	}
+
+	return &DiffResult{
+		Files: files,
+		Type:  DiffTypeAll,
+	}, nil
+}
+
 // SetWorkingDir changes the working directory for VCS commands
 func (s *Service) SetWorkingDir(dir string) error {
 	if err := s.ValidateRepo(dir); err != nil {

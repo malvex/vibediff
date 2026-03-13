@@ -8,7 +8,7 @@ interface UseDiffReturn {
   refetch: () => void
 }
 
-export function useDiff(type: DiffType = 'all'): UseDiffReturn {
+export function useDiff(type: DiffType = 'all', revision?: string | null): UseDiffReturn {
   const [data, setData] = useState<DiffResult | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -19,7 +19,13 @@ export function useDiff(type: DiffType = 'all'): UseDiffReturn {
       if (showLoading) {
         setLoading(true)
       }
-      const response = await fetch(`/api/diff?type=${type}`)
+      const params = new URLSearchParams()
+      if (revision) {
+        params.set('revision', revision)
+      } else {
+        params.set('type', type)
+      }
+      const response = await fetch(`/api/diff?${params.toString()}`)
       if (!response.ok) {
         throw new Error('Failed to fetch diff')
       }
@@ -33,7 +39,7 @@ export function useDiff(type: DiffType = 'all'): UseDiffReturn {
         setLoading(false)
       }
     }
-  }, [type])
+  }, [type, revision])
 
   // Initial fetch
   useEffect(() => {

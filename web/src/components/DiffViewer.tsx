@@ -6,6 +6,7 @@ import { useLocalStorage } from '../hooks/useLocalStorage'
 import { useWebSocketUpdates } from '../contexts/WebSocketContext'
 import { useDirectory } from '../hooks/useDirectory'
 import { useReviewedFiles } from '../hooks/useReviewedFiles'
+import { useRevisions } from '../hooks/useRevisions'
 import { getButtonClassName } from '../utils/buttonStyles'
 import { Group, Panel, Separator } from 'react-resizable-panels'
 import FileList from './FileList'
@@ -15,6 +16,7 @@ import FullFileModal from './FullFileModal'
 import HelpModal from './HelpModal'
 import DarkModeToggle from './DarkModeToggle'
 import DirectorySwitcher from './DirectorySwitcher'
+import RevisionList from './RevisionList'
 
 interface DiffViewerProps {
   className?: string
@@ -33,21 +35,24 @@ export default function DiffViewer({ className = '' }: DiffViewerProps): React.R
   const [wrapLines, setWrapLines] = useState<boolean>(false)
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [showHelp, setShowHelp] = useState(false)
+  const [selectedRevision, setSelectedRevision] = useState<string | null>(null)
 
-  const { data, loading, error, refetch } = useDiff(diffType)
+  const { data, loading, error, refetch } = useDiff(diffType, selectedRevision)
   const { addComment, deleteComment, getCommentsForLine, getCommentRangeLines } = useComments()
   const { lastUpdate } = useWebSocketUpdates()
   const { currentDirectory, changeDirectory, validateDirectory } = useDirectory()
   const { reviewedFiles, toggleReviewed, clearReviewed, validateReviewed } = useReviewedFiles(currentDirectory)
+  const { revisions, loading: revisionsLoading, refetch: refetchRevisions } = useRevisions()
 
   // Refetch when WebSocket triggers an update
   useEffect(() => {
     setIsRefreshing(true)
     refetch()
+    refetchRevisions()
     // Clear refreshing indicator after a short delay
     const timer = setTimeout(() => { setIsRefreshing(false); }, 500)
     return () => { clearTimeout(timer); }
-  }, [lastUpdate, refetch])
+  }, [lastUpdate, refetch, refetchRevisions])
 
   // Load preferences from localStorage
   useEffect(() => {
@@ -210,25 +215,29 @@ export default function DiffViewer({ className = '' }: DiffViewerProps): React.R
               )}
             </div>
             <div className="flex items-center gap-2 flex-nowrap whitespace-nowrap">
-            {/* Diff Type Selector */}
-            <div className="flex">
-              {(['all', 'staged', 'unstaged'] as DiffType[]).map((type, index) => (
-                <button
-                  key={type}
-                  onClick={() => { setDiffType(type); }}
-                  className={(() => {
-                    const isActive = diffType === type
-                    if (index === 0) return getButtonClassName(isActive, 'left')
-                    if (index === 2) return getButtonClassName(isActive, 'right')
-                    return getButtonClassName(isActive, 'middle')
-                  })()}
-                >
-                  {type === 'all' ? 'All Changes' : type.charAt(0).toUpperCase() + type.slice(1)}
-                </button>
-              ))}
-            </div>
+            {/* Diff Type Selector - only for working copy */}
+            {selectedRevision === null && (
+              <>
+                <div className="flex">
+                  {(['all', 'staged', 'unstaged'] as DiffType[]).map((type, index) => (
+                    <button
+                      key={type}
+                      onClick={() => { setDiffType(type); }}
+                      className={(() => {
+                        const isActive = diffType === type
+                        if (index === 0) return getButtonClassName(isActive, 'left')
+                        if (index === 2) return getButtonClassName(isActive, 'right')
+                        return getButtonClassName(isActive, 'middle')
+                      })()}
+                    >
+                      {type === 'all' ? 'All Changes' : type.charAt(0).toUpperCase() + type.slice(1)}
+                    </button>
+                  ))}
+                </div>
 
-            <div className="border-l border-white/20 h-5" />
+                <div className="border-l border-white/20 h-5" />
+              </>
+            )}
 
             {/* View Mode Toggle */}
             <div className="flex">
@@ -292,64 +301,92 @@ export default function DiffViewer({ className = '' }: DiffViewerProps): React.R
       <Group orientation="horizontal" className="min-h-[calc(100vh-53px)]" id="resize-group">
         {/* Sidebar */}
         <Panel defaultSize={20} minSize={15} maxSize={600} id="sidebar">
-          <div className="h-full bg-[#fafbfc] dark:bg-[#0d1117] border-r border-[#e1e4e8] dark:border-[#30363d] p-2 overflow-y-auto">
-            <div className="flex items-center justify-between mb-2">
-              <h3 className="text-xs font-semibold text-[#24292e] dark:text-[#c9d1d9]">
-                Files changed ({data?.files.length ?? 0})
-                {reviewedFiles.size > 0 && (
-                  <span className="ml-2 text-xs text-[#57606a] dark:text-[#8b949e]">
-                    ({reviewedFiles.size} reviewed)
-                  </span>
-                )}
-              </h3>
+          <Group orientation="vertical" className="h-full" id="sidebar-group">
+            <Panel defaultSize={60} minSize={20} id="file-panel">
+              <div className="h-full bg-[#fafbfc] dark:bg-[#0d1117] border-r border-[#e1e4e8] dark:border-[#30363d] p-2 overflow-y-auto">
+                <div className="flex items-center justify-between mb-2">
+                  <h3 className="text-xs font-semibold text-[#24292e] dark:text-[#c9d1d9]">
+                    Files changed ({data?.files.length ?? 0})
+                    {reviewedFiles.size > 0 && (
+                      <span className="ml-2 text-xs text-[#57606a] dark:text-[#8b949e]">
+                        ({reviewedFiles.size} reviewed)
+                      </span>
+                    )}
+                  </h3>
 
-              <div className="flex items-center gap-2">
-                {reviewedFiles.size > 0 && (
-                  <button
-                    onClick={clearReviewed}
-                    className="text-xs px-1.5 py-0.5 text-[#57606a] dark:text-[#8b949e]
-                               hover:text-[#24292e] dark:hover:text-[#c9d1d9]
-                               hover:bg-[rgba(0,0,0,0.03)] dark:hover:bg-[rgba(255,255,255,0.05)]
-                               rounded transition-colors"
-                    title="Clear all reviewed marks"
-                  >
-                    Clear
-                  </button>
-                )}
+                  <div className="flex items-center gap-2">
+                    {reviewedFiles.size > 0 && (
+                      <button
+                        onClick={clearReviewed}
+                        className="text-xs px-1.5 py-0.5 text-[#57606a] dark:text-[#8b949e]
+                                   hover:text-[#24292e] dark:hover:text-[#c9d1d9]
+                                   hover:bg-[rgba(0,0,0,0.03)] dark:hover:bg-[rgba(255,255,255,0.05)]
+                                   rounded transition-colors"
+                        title="Clear all reviewed marks"
+                      >
+                        Clear
+                      </button>
+                    )}
 
-                <button
-                  onClick={() => { setFileViewMode(fileViewMode === 'list' ? 'tree' : 'list'); }}
-                  className="text-base p-0.5 text-[#586069] dark:text-[#8b949e] hover:text-[#24292e] dark:hover:text-[#c9d1d9] transition-colors cursor-pointer bg-transparent border-none opacity-70 hover:opacity-100"
-                  title={fileViewMode === 'list' ? 'Switch to tree view' : 'Switch to list view'}
-                >
-                  {fileViewMode === 'list' ? '◈' : '☰'}
-                </button>
+                    <button
+                      onClick={() => { setFileViewMode(fileViewMode === 'list' ? 'tree' : 'list'); }}
+                      className="text-base p-0.5 text-[#586069] dark:text-[#8b949e] hover:text-[#24292e] dark:hover:text-[#c9d1d9] transition-colors cursor-pointer bg-transparent border-none opacity-70 hover:opacity-100"
+                      title={fileViewMode === 'list' ? 'Switch to tree view' : 'Switch to list view'}
+                    >
+                      {fileViewMode === 'list' ? '◈' : '☰'}
+                    </button>
+                  </div>
+                </div>
+
+                {/* File List */}
+                <FileList
+                  files={data?.files ?? []}
+                  selectedFile={selectedFile}
+                  onSelectFile={setSelectedFile}
+                  displayMode={displayMode}
+                  viewMode={fileViewMode}
+                  collapsedFolders={collapsedFolders}
+                  onToggleFolderCollapse={(folder) => {
+                    setCollapsedFolders(prev => {
+                      const newSet = new Set(prev)
+                      if (newSet.has(folder)) {
+                        newSet.delete(folder)
+                      } else {
+                        newSet.add(folder)
+                      }
+                      return newSet
+                    })
+                  }}
+                  reviewedFiles={reviewedFiles}
+                  onToggleReviewed={toggleReviewed}
+                />
               </div>
-            </div>
+            </Panel>
 
-            {/* File List */}
-            <FileList
-              files={data?.files ?? []}
-              selectedFile={selectedFile}
-              onSelectFile={setSelectedFile}
-              displayMode={displayMode}
-              viewMode={fileViewMode}
-              collapsedFolders={collapsedFolders}
-              onToggleFolderCollapse={(folder) => {
-                setCollapsedFolders(prev => {
-                  const newSet = new Set(prev)
-                  if (newSet.has(folder)) {
-                    newSet.delete(folder)
-                  } else {
-                    newSet.add(folder)
-                  }
-                  return newSet
-                })
-              }}
-              reviewedFiles={reviewedFiles}
-              onToggleReviewed={toggleReviewed}
+            <Separator
+              className="h-1.5 bg-[#d0d7de] dark:bg-[#30363d] hover:bg-[#0969da] dark:hover:bg-[#58a6ff] transition-colors"
+              data-separator="resize-handle"
             />
-          </div>
+
+            <Panel defaultSize={40} minSize={15} id="revision-panel">
+              <div className="h-full bg-[#fafbfc] dark:bg-[#0d1117] border-r border-[#e1e4e8] dark:border-[#30363d] overflow-y-auto">
+                <div className="px-2 pt-2 pb-1">
+                  <h3 className="text-xs font-semibold text-[#24292e] dark:text-[#c9d1d9]">
+                    Revisions
+                  </h3>
+                </div>
+                <RevisionList
+                  revisions={revisions}
+                  loading={revisionsLoading}
+                  selectedRevision={selectedRevision}
+                  onSelectRevision={(rev) => {
+                    setSelectedRevision(rev)
+                    setSelectedFile(null)
+                  }}
+                />
+              </div>
+            </Panel>
+          </Group>
         </Panel>
 
         <Separator

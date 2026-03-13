@@ -47,6 +47,23 @@ func (h *Handler) writeJSON(w http.ResponseWriter, data interface{}) {
 }
 
 func (h *Handler) GetDiff(w http.ResponseWriter, r *http.Request) {
+	// Check if a specific revision is requested
+	revision := r.URL.Query().Get("revision")
+	if revision != "" {
+		diff, err := h.gitService.GetRevisionDiff(revision)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		result := map[string]interface{}{
+			"files":    diff.Files,
+			"type":     diff.Type,
+			"revision": revision,
+		}
+		h.writeJSON(w, result)
+		return
+	}
+
 	diffType := git.DiffType(r.URL.Query().Get("type"))
 	if diffType == "" {
 		diffType = git.DiffTypeAll
@@ -64,6 +81,23 @@ func (h *Handler) GetDiff(w http.ResponseWriter, r *http.Request) {
 	}
 
 	h.writeJSON(w, result)
+}
+
+func (h *Handler) GetRevisions(w http.ResponseWriter, r *http.Request) {
+	limit := 50
+	if l := r.URL.Query().Get("limit"); l != "" {
+		if n, err := fmt.Sscanf(l, "%d", &limit); err != nil || n != 1 {
+			limit = 50
+		}
+	}
+
+	revisions, err := h.gitService.GetRevisions(limit)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	h.writeJSON(w, revisions)
 }
 
 func (h *Handler) GetFileDiff(w http.ResponseWriter, r *http.Request) {

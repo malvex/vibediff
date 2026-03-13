@@ -117,6 +117,7 @@ func main() {
 
 	r := mux.NewRouter()
 
+	r.HandleFunc("/api/revisions", handler.GetRevisions).Methods("GET")
 	r.HandleFunc("/api/diff", handler.GetDiff).Methods("GET")
 	r.HandleFunc("/api/diff/{file:.+}/full", handler.GetFullFileWithDiff).Methods("GET")
 	r.HandleFunc("/api/diff/{file:.+}", handler.GetFileDiff).Methods("GET")

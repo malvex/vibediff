@@ -34,6 +34,15 @@ export interface DiffLine {
 export interface DiffResult {
   files: FileDiff[]
   type: DiffType
+  revision?: string
+}
+
+export interface Revision {
+  id: string
+  shortId: string
+  description: string
+  author: string
+  timestamp: string
 }
 
 export interface Comment {
