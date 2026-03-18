@@ -72,6 +72,13 @@ func (s *Store) DeleteComment(id string) bool {
 	return false
 }
 
+// Clear removes all comments from the store
+func (s *Store) Clear() {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.comments = make(map[string]*Comment)
+}
+
 func generateID() string {
 	b := make([]byte, 8)
 	if _, err := rand.Read(b); err != nil {

@@ -38,10 +38,10 @@ export default function DiffViewer({ className = '' }: DiffViewerProps): React.R
   const [selectedRevision, setSelectedRevision] = useState<string | null>(null)
 
   const { data, loading, error, refetch } = useDiff(diffType, selectedRevision)
-  const { comments, addComment, deleteComment, getCommentsForLine, getCommentRangeLines, formatCommentsForExport } = useComments()
   const [copyFeedback, setCopyFeedback] = useState(false)
   const { lastUpdate } = useWebSocketUpdates()
   const { currentDirectory, changeDirectory, validateDirectory } = useDirectory()
+  const { comments, addComment, deleteComment, getCommentsForLine, getCommentRangeLines, formatCommentsForExport } = useComments(currentDirectory)
   const { reviewedFiles, toggleReviewed, clearReviewed, validateReviewed } = useReviewedFiles(currentDirectory)
   const { revisions, loading: revisionsLoading, refetch: refetchRevisions } = useRevisions()
 

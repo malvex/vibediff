@@ -10,10 +10,10 @@ interface UseCommentsReturn {
   formatCommentsForExport: () => string
 }
 
-export function useComments(): UseCommentsReturn {
+export function useComments(currentDirectory?: string): UseCommentsReturn {
   const [comments, setComments] = useState<Comment[]>([])
 
-  // Fetch existing comments on mount
+  // Fetch comments on mount and when directory changes
   useEffect(() => {
     const fetchComments = async (): Promise<void> => {
       try {
@@ -28,7 +28,7 @@ export function useComments(): UseCommentsReturn {
     }
 
     void fetchComments()
-  }, [])
+  }, [currentDirectory])
 
   const addComment = useCallback(async (file: string, line: number, content: string, lineEnd: number) => {
     try {

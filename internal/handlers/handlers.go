@@ -243,6 +243,7 @@ func (h *Handler) SetDirectory(w http.ResponseWriter, r *http.Request) {
 
 	h.watcher.SetWorkingDir(req.Directory)
 	h.watcher.SetBackend(h.gitService.GetBackend())
+	h.reviewStore.Clear()
 
 	h.writeJSON(w, map[string]string{"directory": req.Directory})
 }
