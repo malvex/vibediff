@@ -15,8 +15,9 @@ const EXPAND_STEP = 10
 interface GapInfo {
   key: string
   gapStart: number // first hidden new line number
-  gapEnd: number   // last hidden new line number
+  gapEnd: number   // last hidden new line number (may be Infinity for after-last gap)
   hunkIndex: number // hunk index this gap appears after (-1 for before first hunk)
+  position: 'before-first' | 'between' | 'after-last'
 }
 
 interface GapExpansion {
@@ -29,6 +30,7 @@ interface GapRenderData {
   bottomLines: DiffLineType[]
   remainingHidden: number
   isExpanded: boolean
+  unknownCount?: boolean
 }
 
 function GapRow({ gap, gapData, isLoading, onExpandDown, onExpandUp, onCollapse, colSpan }: {
@@ -42,11 +44,18 @@ function GapRow({ gap, gapData, isLoading, onExpandDown, onExpandUp, onCollapse,
 }): React.ReactElement | null {
   if (gapData.remainingHidden <= 0 && !gapData.isExpanded) return null
 
+  // Determine which buttons to show based on gap position:
+  // - before-first: only "Expand up" (expand upward from where the first change starts)
+  // - after-last: only "Expand down" (expand downward from where the last change ends)
+  // - between: both "Expand down" (from hunk above) and "Expand up" (from hunk below)
+  const showExpandDown = gap.position === 'between' || gap.position === 'after-last'
+  const showExpandUp = gap.position === 'between' || gap.position === 'before-first'
+
   return (
     <tr className="bg-[#f6f8fa] dark:bg-[#161b22] border-y border-[#d0d7de] dark:border-[#30363d]">
       <td colSpan={colSpan} className="px-[10px] py-1 text-xs font-mono text-center">
         <span className="inline-flex items-center gap-3">
-          {gapData.remainingHidden > 0 && (
+          {gapData.remainingHidden > 0 && showExpandDown && (
             <button
               onClick={onExpandDown}
               className="text-[#0969da] dark:text-[#58a6ff] hover:underline cursor-pointer bg-transparent border-none"
@@ -59,13 +68,13 @@ function GapRow({ gap, gapData, isLoading, onExpandDown, onExpandUp, onCollapse,
           {isLoading && (
             <span className="text-[#57606a] dark:text-[#8b949e]">Loading...</span>
           )}
-          {!isLoading && gapData.remainingHidden > 0 && (
+          {!isLoading && gapData.remainingHidden > 0 && !gapData.unknownCount && (
             <span className="text-[#57606a] dark:text-[#8b949e]">
               {String(gapData.remainingHidden)} lines hidden
             </span>
           )}
 
-          {gapData.remainingHidden > 0 && gap.hunkIndex >= 0 && (
+          {gapData.remainingHidden > 0 && showExpandUp && (
             <button
               onClick={onExpandUp}
               className="text-[#0969da] dark:text-[#58a6ff] hover:underline cursor-pointer bg-transparent border-none"
@@ -161,7 +170,8 @@ export default function FileDiff({
         key: 'before',
         gapStart: 1,
         gapEnd: firstStart - 1,
-        hunkIndex: -1
+        hunkIndex: -1,
+        position: 'before-first'
       })
     }
 
@@ -175,10 +185,22 @@ export default function FileDiff({
           key: `after-${String(i)}`,
           gapStart: currentEnd,
           gapEnd: next.newStart - 1,
-          hunkIndex: i
+          hunkIndex: i,
+          position: 'between'
         })
       }
     }
+
+    // Gap after last hunk (we don't know the file length yet, so use Infinity as placeholder)
+    const lastHunk = hunks[hunks.length - 1]
+    const lastEnd = lastHunk.newStart + lastHunk.newLines
+    result.push({
+      key: `after-${String(hunks.length - 1)}`,
+      gapStart: lastEnd,
+      gapEnd: Infinity,
+      hunkIndex: hunks.length - 1,
+      position: 'after-last'
+    })
 
     return result
   }, [file.hunks])
@@ -189,6 +211,11 @@ export default function FileDiff({
       return gapInfos.find(g => g.key === 'before')
     }
     return gapInfos.find(g => g.key === `after-${String(hunkIndex)}`)
+  }, [gapInfos])
+
+  // Find gap that appears after the last hunk
+  const getGapAfterLastHunk = useCallback((): GapInfo | undefined => {
+    return gapInfos.find(g => g.position === 'after-last')
   }, [gapInfos])
 
   const fetchFullDiff = useCallback(async (): Promise<void> => {
@@ -254,11 +281,36 @@ export default function FileDiff({
     })
   }, [])
 
+  // Get the max line number from the full diff (for after-last gap)
+  const fullDiffMaxLine = useMemo(() => {
+    if (!fullLineMap) return null
+    let max = 0
+    for (const num of fullLineMap.keys()) {
+      if (num > max) max = num
+    }
+    return max
+  }, [fullLineMap])
+
   // Get render data for a gap
   const getGapRenderData = useCallback((gap: GapInfo): GapRenderData => {
     const expansion = gapExpansions[gap.key] ?? { down: 0, up: 0 }
     const isExpanded = expansion.down > 0 || expansion.up > 0
-    const totalGap = gap.gapEnd - gap.gapStart + 1
+
+    // For the after-last gap, we need the actual file end from the full diff
+    let effectiveGapEnd = gap.gapEnd
+    if (gap.position === 'after-last') {
+      if (fullDiffMaxLine != null && fullDiffMaxLine >= gap.gapStart) {
+        effectiveGapEnd = fullDiffMaxLine
+      } else if (!fullLineMap) {
+        // Haven't loaded full diff yet; show the gap row but with unknown count
+        return { topLines: [], bottomLines: [], remainingHidden: 1, isExpanded, unknownCount: true }
+      } else {
+        // Full diff loaded but no lines after last hunk — no gap to show
+        return { topLines: [], bottomLines: [], remainingHidden: 0, isExpanded: false }
+      }
+    }
+
+    const totalGap = effectiveGapEnd - gap.gapStart + 1
 
     if (!fullLineMap || !isExpanded) {
       return { topLines: [], bottomLines: [], remainingHidden: totalGap, isExpanded }
@@ -274,7 +326,7 @@ export default function FileDiff({
     }
 
     const bottomLines: DiffLineType[] = []
-    const bottomStart = gap.gapEnd - effectiveUp + 1
+    const bottomStart = effectiveGapEnd - effectiveUp + 1
     for (let i = 0; i < effectiveUp; i++) {
       const line = fullLineMap.get(bottomStart + i)
       if (line) bottomLines.push(line)
@@ -282,7 +334,7 @@ export default function FileDiff({
 
     const remainingHidden = Math.max(0, totalGap - effectiveDown - effectiveUp)
     return { topLines, bottomLines, remainingHidden, isExpanded }
-  }, [gapExpansions, fullLineMap])
+  }, [gapExpansions, fullLineMap, fullDiffMaxLine])
 
   const lineOrder = useMemo(() =>
     file.hunks.flatMap(hunk =>
@@ -479,6 +531,11 @@ export default function FileDiff({
                   </React.Fragment>
                   )
                 })}
+                {/* Gap after last hunk */}
+                {(() => {
+                  const gapAfterLast = getGapAfterLastHunk()
+                  return gapAfterLast ? renderGap(gapAfterLast, 3, false) : null
+                })()}
               </tbody>
             </table>
           ) : (
@@ -527,6 +584,11 @@ export default function FileDiff({
                   </React.Fragment>
                   )
                 })}
+                {/* Gap after last hunk */}
+                {(() => {
+                  const gapAfterLast = getGapAfterLastHunk()
+                  return gapAfterLast ? renderGap(gapAfterLast, 4, true) : null
+                })()}
               </tbody>
             </table>
           )}
