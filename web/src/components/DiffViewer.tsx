@@ -426,7 +426,7 @@ export default function DiffViewer({ className = '' }: DiffViewerProps): React.R
 
         {/* Main Content */}
         <Panel defaultSize={80} minSize={40} id="main">
-          <div className="h-full bg-surface p-3 overflow-y-auto">
+          <div className="h-full bg-surface overflow-y-auto">
         {(() => {
           // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
           if (loading) {

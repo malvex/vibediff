@@ -421,10 +421,10 @@ export default function FileDiff({
   }, [getGapRenderData, renderExpandedLinesUnified, renderExpandedLinesSplit, isLoadingFull, handleExpand, handleCollapse])
 
   return (
-    <div id={`file-${file.path.replace(/\//g, '-')}`} className="border border-edge rounded-lg mb-3">
-      {/* File Header */}
+    <div id={`file-${file.path.replace(/\//g, '-')}`} className="mx-3 mb-3 first:mt-3">
+      {/* File Header — sticky, sits outside the bordered content area */}
       <div
-        className="bg-surface-raised px-3 py-2 border-b border-edge flex items-center justify-between gap-2 cursor-pointer select-none rounded-t-lg"
+        className={`sticky top-0 z-10 bg-surface-raised px-3 py-2 border border-edge flex items-center justify-between gap-2 cursor-pointer select-none ${collapsed ? 'rounded' : 'rounded-t'}`}
         onClick={onToggleCollapse}
       >
         <div className="flex items-center gap-2 flex-1 cursor-pointer" onClick={(e) => { e.stopPropagation(); onToggleCollapse(); }}>
@@ -490,7 +490,7 @@ export default function FileDiff({
 
       {/* Diff Content */}
       {!collapsed && (
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto border-x border-b border-edge rounded-b">
           {viewMode === 'unified' ? (
             <table className="diff-table w-full">
               <tbody>
