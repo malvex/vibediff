@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from 'react'
-import type { FileDiff, Comment } from '../types/diff'
+import type { DiffType, FileDiff, Comment } from '../types/diff'
 import FileDiffComponent from './FileDiff'
 import CommentDialog from './CommentDialog'
 
@@ -13,9 +13,11 @@ interface FullFileModalProps {
   onDeleteComment: (id: string) => Promise<void>
   onAddComment: (file: string, line: number, content: string, lineEnd: number) => void
   wrapLines?: boolean
+  diffType?: DiffType
+  selectedRevision?: string | null
 }
 
-export default function FullFileModal({ isOpen, filePath, onClose, viewMode, getCommentsForLine, getCommentRangeLines, onDeleteComment, onAddComment, wrapLines = false }: FullFileModalProps): React.ReactElement | null {
+export default function FullFileModal({ isOpen, filePath, onClose, viewMode, getCommentsForLine, getCommentRangeLines, onDeleteComment, onAddComment, wrapLines = false, diffType = 'all', selectedRevision }: FullFileModalProps): React.ReactElement | null {
   const [fileData, setFileData] = useState<FileDiff | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -25,8 +27,13 @@ export default function FullFileModal({ isOpen, filePath, onClose, viewMode, get
     setLoading(true)
     setError(null)
     try {
-      // Fetch the file diff with full context
-      const response = await fetch(`/api/diff/${encodeURIComponent(filePath)}/full`)
+      const params = new URLSearchParams()
+      if (selectedRevision) {
+        params.set('revision', selectedRevision)
+      } else {
+        params.set('type', diffType)
+      }
+      const response = await fetch(`/api/diff/${encodeURIComponent(filePath)}/full?${params.toString()}`)
       if (!response.ok) {
         throw new Error('Failed to fetch full file diff')
       }
@@ -37,7 +44,7 @@ export default function FullFileModal({ isOpen, filePath, onClose, viewMode, get
     } finally {
       setLoading(false)
     }
-  }, [filePath])
+  }, [filePath, diffType, selectedRevision])
 
   useEffect(() => {
     if (isOpen && filePath) {

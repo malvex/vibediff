@@ -467,6 +467,11 @@ func (s *Service) getJJRevisions(limit int) ([]Revision, error) {
 		})
 	}
 
+	// In jj, the first revision (@ / working copy) is the working copy
+	if len(revisions) > 0 {
+		revisions[0].IsWorkingCopy = true
+	}
+
 	return revisions, nil
 }
 
@@ -539,6 +544,7 @@ func (s *Service) SetWorkingDir(dir string) error {
 	}
 	s.workingDir = dir
 	s.backend = s.DetectBackend()
+	s.diffTarget = "" // Reset diff target — old target likely doesn't exist in new repo
 	return nil
 }
 

@@ -66,9 +66,10 @@ type DiffResult struct {
 
 // Revision represents a single commit/revision in the VCS history
 type Revision struct {
-	ID          string `json:"id"`
-	ShortID     string `json:"shortId"`
-	Description string `json:"description"`
-	Author      string `json:"author"`
-	Timestamp   string `json:"timestamp"`
+	ID            string `json:"id"`
+	ShortID       string `json:"shortId"`
+	Description   string `json:"description"`
+	Author        string `json:"author"`
+	Timestamp     string `json:"timestamp"`
+	IsWorkingCopy bool   `json:"isWorkingCopy,omitempty"`
 }

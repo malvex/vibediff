@@ -40,7 +40,7 @@ export default function DiffViewer({ className = '' }: DiffViewerProps): React.R
   const { data, loading, error, refetch } = useDiff(diffType, selectedRevision)
   const [copyFeedback, setCopyFeedback] = useState(false)
   const { lastUpdate } = useWebSocketUpdates()
-  const { currentDirectory, changeDirectory, validateDirectory } = useDirectory()
+  const { currentDirectory, backend, changeDirectory, validateDirectory } = useDirectory()
   const { comments, addComment, deleteComment, getCommentsForLine, getCommentRangeLines, formatCommentsForExport } = useComments(currentDirectory)
   const { reviewedFiles, toggleReviewed, clearReviewed, validateReviewed } = useReviewedFiles(currentDirectory)
   const { revisions, loading: revisionsLoading, refetch: refetchRevisions } = useRevisions()
@@ -176,7 +176,10 @@ export default function DiffViewer({ className = '' }: DiffViewerProps): React.R
 
   const handleDirectoryChange = async (dir: string): Promise<void> => {
     await changeDirectory(dir)
+    setSelectedRevision(null)
+    setSelectedFile(null)
     refetch()
+    refetchRevisions()
   }
 
   if (loading) {
@@ -216,8 +219,8 @@ export default function DiffViewer({ className = '' }: DiffViewerProps): React.R
               )}
             </div>
             <div className="flex items-center gap-2 flex-nowrap whitespace-nowrap">
-            {/* Diff Type Selector - only for working copy */}
-            {selectedRevision === null && (
+            {/* Diff Type Selector - only for git working copy (jj has no staging area) */}
+            {selectedRevision === null && backend === 'git' && (
               <>
                 <div className="flex">
                   {(['all', 'staged', 'unstaged'] as DiffType[]).map((type, index) => (
@@ -399,6 +402,7 @@ export default function DiffViewer({ className = '' }: DiffViewerProps): React.R
                     setSelectedRevision(rev)
                     setSelectedFile(null)
                   }}
+                  backend={backend}
                 />
               </div>
             </Panel>
@@ -522,6 +526,8 @@ export default function DiffViewer({ className = '' }: DiffViewerProps): React.R
           })
         }}
         wrapLines={wrapLines}
+        diffType={diffType}
+        selectedRevision={selectedRevision}
       />
 
       {/* Help Modal */}

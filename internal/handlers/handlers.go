@@ -220,10 +220,13 @@ func (h *Handler) GetFileContent(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// GetDirectory returns the current working directory
+// GetDirectory returns the current working directory and backend info
 func (h *Handler) GetDirectory(w http.ResponseWriter, r *http.Request) {
 	dir := h.gitService.GetWorkingDir()
-	h.writeJSON(w, map[string]string{"directory": dir})
+	h.writeJSON(w, map[string]string{
+		"directory": dir,
+		"backend":   string(h.gitService.GetBackend()),
+	})
 }
 
 // SetDirectory changes the working directory
@@ -245,7 +248,10 @@ func (h *Handler) SetDirectory(w http.ResponseWriter, r *http.Request) {
 	h.watcher.SetBackend(h.gitService.GetBackend())
 	h.reviewStore.Clear()
 
-	h.writeJSON(w, map[string]string{"directory": req.Directory})
+	h.writeJSON(w, map[string]string{
+		"directory": req.Directory,
+		"backend":   string(h.gitService.GetBackend()),
+	})
 }
 
 // ValidateDirectory validates a directory is a git or jj repo

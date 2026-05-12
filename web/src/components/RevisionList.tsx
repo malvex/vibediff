@@ -1,10 +1,11 @@
-import type { Revision } from '../types/diff'
+import type { Revision, VCSBackend } from '../types/diff'
 
 interface RevisionListProps {
   revisions: Revision[]
   loading: boolean
   selectedRevision: string | null
   onSelectRevision: (revisionId: string | null) => void
+  backend: VCSBackend
 }
 
 function formatTimestamp(ts: string): string {
@@ -31,6 +32,7 @@ export default function RevisionList({
   loading,
   selectedRevision,
   onSelectRevision,
+  backend,
 }: RevisionListProps): React.ReactElement {
   if (loading) {
     return (
@@ -42,41 +44,65 @@ export default function RevisionList({
 
   return (
     <div className="overflow-y-auto">
-      {/* Working copy option */}
-      <button
-        onClick={() => { onSelectRevision(null); }}
-        className={`w-full text-left px-2 py-1.5 text-xs border-b border-[#e1e4e8] dark:border-[#21262d] transition-colors cursor-pointer ${
-          selectedRevision === null
-            ? 'bg-[#ddf4ff] dark:bg-[#1f6feb33] text-[#0969da] dark:text-[#58a6ff]'
-            : 'text-[#24292e] dark:text-[#c9d1d9] hover:bg-[#f3f4f6] dark:hover:bg-[#161b22]'
-        }`}
-      >
-        <div className="font-medium">Working copy changes</div>
-      </button>
-
-      {revisions.map((rev) => (
+      {/* Working copy option — only for git, since in jj the first revision IS the working copy */}
+      {backend === 'git' && (
         <button
-          key={rev.id}
-          onClick={() => { onSelectRevision(rev.id); }}
+          onClick={() => { onSelectRevision(null); }}
           className={`w-full text-left px-2 py-1.5 text-xs border-b border-[#e1e4e8] dark:border-[#21262d] transition-colors cursor-pointer ${
-            selectedRevision === rev.id
+            selectedRevision === null
               ? 'bg-[#ddf4ff] dark:bg-[#1f6feb33] text-[#0969da] dark:text-[#58a6ff]'
               : 'text-[#24292e] dark:text-[#c9d1d9] hover:bg-[#f3f4f6] dark:hover:bg-[#161b22]'
           }`}
         >
-          <div className="flex items-center gap-1.5">
-            <span className="font-mono text-[10px] px-1 py-0.5 rounded bg-[#f0f3f6] dark:bg-[#21262d] text-[#57606a] dark:text-[#8b949e] shrink-0">
-              {rev.shortId}
-            </span>
-            <span className="truncate">{rev.description || '(no description)'}</span>
-          </div>
-          <div className="flex items-center gap-1 mt-0.5 text-[10px] text-[#57606a] dark:text-[#8b949e]">
-            <span className="truncate">{rev.author}</span>
-            <span>·</span>
-            <span className="shrink-0">{formatTimestamp(rev.timestamp)}</span>
-          </div>
+          <div className="font-medium">Working copy changes</div>
         </button>
-      ))}
+      )}
+
+      {revisions.map((rev) => {
+        // For jj, the working copy revision is selected when selectedRevision is null
+        const isSelected = rev.isWorkingCopy && backend === 'jj'
+          ? selectedRevision === null
+          : selectedRevision === rev.id
+
+        return (
+          <button
+            key={rev.id}
+            onClick={() => {
+              // For jj working copy, use null to get the standard diff behavior
+              // (handles live updates correctly as @ may change)
+              if (rev.isWorkingCopy && backend === 'jj') {
+                onSelectRevision(null)
+              } else {
+                onSelectRevision(rev.id)
+              }
+            }}
+            className={`w-full text-left px-2 py-1.5 text-xs border-b border-[#e1e4e8] dark:border-[#21262d] transition-colors cursor-pointer ${
+              isSelected
+                ? 'bg-[#ddf4ff] dark:bg-[#1f6feb33] text-[#0969da] dark:text-[#58a6ff]'
+                : 'text-[#24292e] dark:text-[#c9d1d9] hover:bg-[#f3f4f6] dark:hover:bg-[#161b22]'
+            }`}
+          >
+            <div className="flex items-center gap-1.5">
+              <span className="font-mono text-[10px] px-1 py-0.5 rounded bg-[#f0f3f6] dark:bg-[#21262d] text-[#57606a] dark:text-[#8b949e] shrink-0">
+                {rev.shortId}
+              </span>
+              <span className="truncate">
+                {rev.description || '(no description)'}
+              </span>
+              {rev.isWorkingCopy && (
+                <span className="shrink-0 text-[10px] px-1 py-0.5 rounded bg-[#ddf4ff] dark:bg-[#1f6feb33] text-[#0969da] dark:text-[#58a6ff]">
+                  @
+                </span>
+              )}
+            </div>
+            <div className="flex items-center gap-1 mt-0.5 text-[10px] text-[#57606a] dark:text-[#8b949e]">
+              <span className="truncate">{rev.author}</span>
+              <span>·</span>
+              <span className="shrink-0">{formatTimestamp(rev.timestamp)}</span>
+            </div>
+          </button>
+        )
+      })}
     </div>
   )
 }

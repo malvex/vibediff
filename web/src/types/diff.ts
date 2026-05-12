@@ -37,12 +37,15 @@ export interface DiffResult {
   revision?: string
 }
 
+export type VCSBackend = 'git' | 'jj'
+
 export interface Revision {
   id: string
   shortId: string
   description: string
   author: string
   timestamp: string
+  isWorkingCopy?: boolean
 }
 
 export interface Comment {
