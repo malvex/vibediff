@@ -33,16 +33,6 @@ A local Git/Jujutsu diff viewer that runs entirely on your machine. Review your 
 
 ## Installation
 
-### Homebrew (macOS)
-
-```bash
-brew install malvex/tap/vibediff
-```
-
-### Download Binary
-
-Download the latest binary for your platform from the [GitHub Releases](https://github.com/malvex/vibediff/releases) page.
-
 ### Build From Source
 
 ```bash
