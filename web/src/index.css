@@ -1,28 +1,138 @@
 @import "tailwindcss";
 
-/* Define custom variant for dark mode */
 @custom-variant dark (&:where(.dark, .dark *));
 
+/* ──────────────────────────────────────────────
+   Theme tokens  (light / dark via CSS variables)
+   ────────────────────────────────────────────── */
+:root {
+  --c-surface: #ffffff;
+  --c-surface-raised: #f4f6f8;
+  --c-surface-inset: #e8ecf0;
+  --c-surface-overlay: rgba(15, 23, 42, 0.6);
+
+  --c-fg: #0f172a;
+  --c-fg-muted: #475569;
+  --c-fg-subtle: #64748b;
+
+  --c-edge: #cbd5e1;
+  --c-edge-subtle: #e2e8f0;
+
+  --c-accent: #3b82f6;
+  --c-accent-fg: #ffffff;
+  --c-accent-muted: #eff6ff;
+  --c-accent-emphasis: #2563eb;
+
+  --c-success: #16a34a;
+  --c-danger: #dc2626;
+
+  --c-diff-add: #f0fdf4;
+  --c-diff-add-num-bg: rgba(34, 197, 94, 0.15);
+  --c-diff-add-num-fg: #16a34a;
+  --c-diff-del: #fef2f2;
+  --c-diff-del-num-bg: rgba(239, 68, 68, 0.15);
+  --c-diff-del-num-fg: #dc2626;
+  --c-diff-hunk-bg: rgba(59, 130, 246, 0.06);
+  --c-diff-hunk-fg: #64748b;
+
+  --c-line-num: rgba(71, 85, 105, 0.5);
+  --c-line-num-hover: rgba(71, 85, 105, 0.8);
+
+  --c-selected-bg: rgba(59, 130, 246, 0.12);
+  --c-selected-num-bg: rgba(59, 130, 246, 0.18);
+  --c-selected-num-fg: rgba(59, 130, 246, 0.85);
+
+  --c-commented-bg: rgba(59, 130, 246, 0.14);
+  --c-commented-border: rgba(59, 130, 246, 0.7);
+  --c-commented-num-bg: rgba(59, 130, 246, 0.18);
+
+  --c-hover-line: rgba(0, 0, 0, 0.03);
+}
+
+.dark {
+  --c-surface: #020617;
+  --c-surface-raised: #0f172a;
+  --c-surface-inset: #1e293b;
+  --c-surface-overlay: rgba(0, 0, 0, 0.75);
+
+  --c-fg: #f1f5f9;
+  --c-fg-muted: #94a3b8;
+  --c-fg-subtle: #64748b;
+
+  --c-edge: #334155;
+  --c-edge-subtle: #1e293b;
+
+  --c-accent: #3b82f6;
+  --c-accent-fg: #ffffff;
+  --c-accent-muted: #172554;
+  --c-accent-emphasis: #60a5fa;
+
+  --c-success: #4ade80;
+  --c-danger: #f87171;
+
+  --c-diff-add: rgba(34, 197, 94, 0.1);
+  --c-diff-add-num-bg: rgba(34, 197, 94, 0.08);
+  --c-diff-add-num-fg: #4ade80;
+  --c-diff-del: rgba(239, 68, 68, 0.1);
+  --c-diff-del-num-bg: rgba(239, 68, 68, 0.08);
+  --c-diff-del-num-fg: #f87171;
+  --c-diff-hunk-bg: rgba(59, 130, 246, 0.08);
+  --c-diff-hunk-fg: #64748b;
+
+  --c-line-num: rgba(148, 163, 184, 0.4);
+  --c-line-num-hover: rgba(148, 163, 184, 0.6);
+
+  --c-selected-bg: rgba(59, 130, 246, 0.15);
+  --c-selected-num-bg: rgba(59, 130, 246, 0.2);
+  --c-selected-num-fg: rgba(59, 130, 246, 0.8);
+
+  --c-commented-bg: rgba(59, 130, 246, 0.15);
+  --c-commented-border: rgba(59, 130, 246, 0.5);
+  --c-commented-num-bg: rgba(59, 130, 246, 0.18);
+
+  --c-hover-line: rgba(255, 255, 255, 0.03);
+}
+
+/* Tailwind theme tokens — reference the CSS vars so utilities auto-adapt to dark mode */
 @theme {
   --color-scheme: light dark;
-
-  /* Custom CSS properties to match original design */
   --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Consolas, "Liberation Mono", Menlo, monospace;
   --line-height-code: 20px;
-  --size-line-number: 50px;
-  --color-hunk-bg: rgba(64, 158, 255, 0.1);
-  --color-hunk-text: rgba(27,31,35,.7);
-  --color-hunk-bg-dark: rgba(56, 139, 253, 0.15);
-  --color-hunk-text-dark: #8b949e;
+
+  --color-surface: var(--c-surface);
+  --color-surface-raised: var(--c-surface-raised);
+  --color-surface-inset: var(--c-surface-inset);
+  --color-surface-overlay: var(--c-surface-overlay);
+
+  --color-fg: var(--c-fg);
+  --color-fg-muted: var(--c-fg-muted);
+  --color-fg-subtle: var(--c-fg-subtle);
+
+  --color-edge: var(--c-edge);
+  --color-edge-subtle: var(--c-edge-subtle);
+
+  --color-accent: var(--c-accent);
+  --color-accent-fg: var(--c-accent-fg);
+  --color-accent-muted: var(--c-accent-muted);
+  --color-accent-emphasis: var(--c-accent-emphasis);
+
+  --color-success: var(--c-success);
+  --color-danger: var(--c-danger);
+
+  --color-diff-add: var(--c-diff-add);
+  --color-diff-del: var(--c-diff-del);
+  --color-diff-hunk: var(--c-diff-hunk-bg);
+  --color-diff-hunk-fg: var(--c-diff-hunk-fg);
 }
 
-/* Base styles */
-* {
-  box-sizing: border-box;
-}
+/* ──────────────────────────────────────────────
+   Base
+   ────────────────────────────────────────────── */
+* { box-sizing: border-box; }
 
 body {
-  @apply bg-white dark:bg-[#0d1117] text-[#24292e] dark:text-[#c9d1d9];
+  background-color: var(--c-surface);
+  color: var(--c-fg);
   margin: 0;
   padding: 0;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
@@ -30,7 +140,9 @@ body {
   line-height: 1.5;
 }
 
-/* Ensure Prism doesn't override our styles */
+/* ──────────────────────────────────────────────
+   Prism overrides
+   ────────────────────────────────────────────── */
 pre[class*="language-"],
 code[class*="language-"] {
   background: transparent !important;
@@ -41,7 +153,9 @@ code[class*="language-"] {
   line-height: var(--line-height-code);
 }
 
-/* Table styles */
+/* ──────────────────────────────────────────────
+   Diff tables
+   ────────────────────────────────────────────── */
 .diff-table,
 .split-diff-table {
   border-collapse: collapse;
@@ -60,77 +174,45 @@ code[class*="language-"] {
   line-height: inherit;
 }
 
-/* Custom styles that can't be done with Tailwind */
-/* Line numbers */
+/* ──────────────────────────────────────────────
+   Line numbers
+   ────────────────────────────────────────────── */
 .line-num {
-  color: rgba(27, 31, 35, .3);
-}
-
-.dark .line-num {
-  color: rgba(139, 148, 158, .4);
+  color: var(--c-line-num);
 }
 
 .line-num-addition {
-  background-color: rgba(46, 160, 67, 0.15) !important;
-  color: rgba(46, 160, 67, 1) !important;
-}
-
-.dark .line-num-addition {
-  background-color: rgba(46, 160, 67, 0.1) !important;
-  color: #3fb950 !important;
+  background-color: var(--c-diff-add-num-bg) !important;
+  color: var(--c-diff-add-num-fg) !important;
 }
 
 .line-num-deletion {
-  background-color: rgba(248, 81, 73, 0.15) !important;
-  color: rgba(248, 81, 73, 1) !important;
+  background-color: var(--c-diff-del-num-bg) !important;
+  color: var(--c-diff-del-num-fg) !important;
 }
 
-.dark .line-num-deletion {
-  background-color: rgba(248, 81, 73, 0.1) !important;
-  color: #f85149 !important;
-}
-
-/* Diff line backgrounds */
-.line-addition {
-  background-color: #e6ffed;
-}
-
-.dark .line-addition {
-  background-color: #1f362d;
-}
-
-.line-deletion {
-  background-color: #ffeef0;
-}
-
-.dark .line-deletion {
-  background-color: #3d1e20;
-}
-
-/* Code line backgrounds */
+/* ──────────────────────────────────────────────
+   Diff line backgrounds
+   ────────────────────────────────────────────── */
+.line-addition,
 .line-code-addition {
-  background-color: #e6ffed;
+  background-color: var(--c-diff-add);
 }
 
-.dark .line-code-addition {
-  background-color: #1f362d;
-}
-
+.line-deletion,
 .line-code-deletion {
-  background-color: #ffeef0;
+  background-color: var(--c-diff-del);
 }
 
-.dark .line-code-deletion {
-  background-color: #3d1e20;
-}
-
-/* Diff prefix indicators */
+/* ──────────────────────────────────────────────
+   Diff prefix indicators (+/-/space)
+   ────────────────────────────────────────────── */
 .line-code[data-prefix]:before {
   content: attr(data-prefix);
   position: absolute;
   left: 10px;
   top: 0;
-  color: rgba(27,31,35,.7);
+  color: var(--c-fg-subtle);
   user-select: none;
   font-family: var(--font-mono);
   font-size: 12px;
@@ -138,14 +220,16 @@ code[class*="language-"] {
 }
 
 .line-code-addition[data-prefix]:before {
-  color: #28a745;
+  color: var(--c-diff-add-num-fg);
 }
 
 .line-code-deletion[data-prefix]:before {
-  color: #d73a49;
+  color: var(--c-diff-del-num-fg);
 }
 
-/* Ensure code content has proper padding */
+/* ──────────────────────────────────────────────
+   Code content
+   ────────────────────────────────────────────── */
 .line-code {
   position: relative;
 }
@@ -157,7 +241,6 @@ code[class*="language-"] {
   white-space: pre !important;
 }
 
-/* Preserve whitespace in all Prism elements */
 .line-code pre,
 .line-code code,
 .line-code span {
@@ -165,111 +248,75 @@ code[class*="language-"] {
   tab-size: 4;
 }
 
-/* Override for wrapped lines */
 .line-code.whitespace-pre-wrap code,
 .line-code.whitespace-pre-wrap span {
   white-space: pre-wrap !important;
   word-break: break-all !important;
 }
 
-/* Split view adjustments */
+/* ──────────────────────────────────────────────
+   Split view
+   ────────────────────────────────────────────── */
 .split-view-active {
   max-width: 100% !important;
 }
 
-.split-view-active > div:last-child {
-  max-width: 100% !important;
-  padding: 0 16px;
-}
-
-/* Dark mode overrides for CSS variables */
-.dark {
-  --color-hunk-bg: var(--color-hunk-bg-dark);
-  --color-hunk-text: var(--color-hunk-text-dark);
-}
-
-/* Hover effect for diff lines */
-.diff-line:hover td.line-code {
-  background-color: rgba(0, 0, 0, 0.02);
-}
-
-.dark .diff-line:hover td.line-code {
-  background-color: rgba(255, 255, 255, 0.03);
-}
-
-/* Line number hover */
-.diff-line:hover td.line-num {
-  color: rgba(27,31,35,.6);
-}
-
-.dark .diff-line:hover td.line-num {
-  color: rgba(139,148,158,.6);
-}
-
-/* Split view table styles */
 .split-diff-table {
   width: 100%;
 }
 
-/* Line number columns */
 .split-diff-table td.line-num {
   width: 50px;
   min-width: 50px;
   max-width: 50px;
 }
 
-/* Code columns */
 .split-diff-table td.line-code {
   width: 50%;
 }
 
-/* Range selection highlight */
+/* ──────────────────────────────────────────────
+   Hover effects
+   ────────────────────────────────────────────── */
+.diff-line:hover td.line-code {
+  background-color: var(--c-hover-line);
+}
+
+.diff-line:hover td.line-num {
+  color: var(--c-line-num-hover);
+}
+
+/* ──────────────────────────────────────────────
+   Range selection highlight
+   ────────────────────────────────────────────── */
 .line-selected td.line-code,
 td.line-selected.line-code {
-  background-color: rgba(3, 102, 214, 0.1) !important;
+  background-color: var(--c-selected-bg) !important;
 }
 
 .line-selected td.line-num,
 td.line-selected.line-num {
-  background-color: rgba(3, 102, 214, 0.15) !important;
-  color: rgba(3, 102, 214, 0.8) !important;
+  background-color: var(--c-selected-num-bg) !important;
+  color: var(--c-selected-num-fg) !important;
 }
 
-.dark .line-selected td.line-code,
-.dark td.line-selected.line-code {
-  background-color: rgba(31, 111, 235, 0.15) !important;
-}
-
-.dark .line-selected td.line-num,
-.dark td.line-selected.line-num {
-  background-color: rgba(31, 111, 235, 0.2) !important;
-  color: rgba(31, 111, 235, 0.8) !important;
-}
-
-/* Persistent range highlight for saved comments */
+/* ──────────────────────────────────────────────
+   Persistent commented-range highlight
+   ────────────────────────────────────────────── */
 .line-commented-range td.line-code,
 td.line-commented-range.line-code {
-  background-color: rgba(3, 102, 214, 0.12) !important;
-  border-left: 3px solid rgba(3, 102, 214, 0.6) !important;
+  background-color: var(--c-commented-bg) !important;
+  border-left: 3px solid var(--c-commented-border) !important;
 }
 
 .line-commented-range td.line-num,
 td.line-commented-range.line-num {
-  background-color: rgba(3, 102, 214, 0.15) !important;
+  background-color: var(--c-commented-num-bg) !important;
 }
 
-.dark .line-commented-range td.line-code,
-.dark td.line-commented-range.line-code {
-  background-color: rgba(31, 111, 235, 0.15) !important;
-  border-left: 3px solid rgba(31, 111, 235, 0.5) !important;
-}
-
-.dark .line-commented-range td.line-num,
-.dark td.line-commented-range.line-num {
-  background-color: rgba(31, 111, 235, 0.18) !important;
-}
-
-/* Resize separator */
+/* ──────────────────────────────────────────────
+   Resize panels
+   ────────────────────────────────────────────── */
 [data-separator] {
   position: relative;
   cursor: col-resize !important;
@@ -280,7 +327,6 @@ td.line-commented-range.line-num {
   cursor: col-resize !important;
 }
 
-/* Ensure panels can resize properly */
 [data-panel] {
   position: relative;
   overflow: visible;

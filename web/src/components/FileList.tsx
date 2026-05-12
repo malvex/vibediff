@@ -17,7 +17,6 @@ export default function FileList({ files, selectedFile, onSelectFile, displayMod
     onSelectFile(file)
 
     if (displayMode === 'all') {
-      // Scroll to the file in the main view
       const element = document.getElementById(`file-${file.path.replace(/\//g, '-')}`)
       if (element) {
         element.scrollIntoView({ behavior: 'smooth', block: 'start' })
@@ -25,7 +24,6 @@ export default function FileList({ files, selectedFile, onSelectFile, displayMod
     }
   }
 
-  // Build tree structure for tree view
   interface TreeNode {
     name: string
     path: string
@@ -41,7 +39,6 @@ export default function FileList({ files, selectedFile, onSelectFile, displayMod
       const parts = file.path.split('/')
       let currentNode = root
 
-      // Build folder structure
       for (let i = 0; i < parts.length - 1; i++) {
         const folderName = parts[i]
         const folderPath = parts.slice(0, i + 1).join('/')
@@ -63,7 +60,6 @@ export default function FileList({ files, selectedFile, onSelectFile, displayMod
         currentNode = folder
       }
 
-      // Add file
       currentNode.children.push({
         name: parts[parts.length - 1],
         path: file.path,
@@ -73,7 +69,6 @@ export default function FileList({ files, selectedFile, onSelectFile, displayMod
       })
     })
 
-    // Sort folders first, then files
     const sortNodes = (node: TreeNode): void => {
       node.children.sort((a, b) => {
         if (a.type === b.type) {
@@ -107,8 +102,8 @@ export default function FileList({ files, selectedFile, onSelectFile, displayMod
             }}
             className={`flex items-center gap-2 px-1.5 py-0.5 rounded cursor-pointer text-xs break-all transition-colors
               ${selectedFile?.path === node.file.path
-                ? 'bg-[#ddf4ff] dark:bg-[#1c2d41] border-l-2 border-l-[#0969da] dark:border-l-[#1f6feb] -ml-[2px] pl-[calc(0.375rem-2px)] text-[#0969da] dark:text-[#58a6ff] font-medium'
-                : 'text-[#24292f] dark:text-[#adbac7] hover:bg-[#f6f8fa] dark:hover:bg-[#21262d]'
+                ? 'bg-accent-muted border-l-2 border-l-accent -ml-[2px] pl-[calc(0.375rem-2px)] text-accent-emphasis font-medium'
+                : 'text-fg hover:bg-surface-raised'
               }`}
             style={{ paddingLeft: `${String(depth * 16 + 6)}px` }}
           >
@@ -120,17 +115,16 @@ export default function FileList({ files, selectedFile, onSelectFile, displayMod
                 onToggleReviewed(file)
               }}
               onClick={(e) => { e.stopPropagation(); }}
-              className="w-4 h-4 rounded border-[#d0d7de] dark:border-[#30363d]
-                         text-[#2188ff] dark:text-[#58a6ff] cursor-pointer flex-shrink-0
-                         focus:ring-2 focus:ring-[#0969da] dark:focus:ring-[#1f6feb]"
+              className="w-4 h-4 rounded border-edge text-accent cursor-pointer flex-shrink-0
+                         focus:ring-2 focus:ring-accent"
               title="Mark as reviewed"
             />
             <span className={`flex-1 min-w-0 ${reviewedFiles.has(file.path) ? 'opacity-60' : ''}`}>
               {node.name}
             </span>
             <div className="flex items-center gap-1 text-xs flex-shrink-0">
-              <span className="text-[#28a745] dark:text-[#2ea043]">+{file.additions}</span>
-              <span className="text-[#d73a49] dark:text-[#f85149]">-{file.deletions}</span>
+              <span className="text-success">+{file.additions}</span>
+              <span className="text-danger">-{file.deletions}</span>
             </div>
           </div>
         )
@@ -141,27 +135,27 @@ export default function FileList({ files, selectedFile, onSelectFile, displayMod
         return (
           <div key={node.path} className="mb-0.5">
             <div
-              className="flex items-center gap-1.5 px-1.5 py-1 rounded cursor-pointer select-none hover:bg-[#e8eaed] dark:hover:bg-[#21262d] transition-colors"
+              className="flex items-center gap-1.5 px-1.5 py-1 rounded cursor-pointer select-none hover:bg-surface-inset transition-colors"
               onClick={() => {
                 onToggleFolderCollapse(node.path)
               }}
               style={{ paddingLeft: `${String(depth * 16 + 6)}px` }}
             >
               <svg
-                className={`w-2.5 h-2.5 flex-shrink-0 text-[#656d76] dark:text-[#7d8590] transition-transform ${isCollapsed ? '' : 'rotate-90'}`}
+                className={`w-2.5 h-2.5 flex-shrink-0 text-fg-muted transition-transform ${isCollapsed ? '' : 'rotate-90'}`}
                 fill="currentColor"
                 viewBox="0 0 16 16"
               >
                 <path d="M6 4l4 4-4 4V4z"/>
               </svg>
               <svg
-                className="w-3.5 h-3.5 flex-shrink-0 text-[#54aeff] dark:text-[#539bf5]"
+                className="w-3.5 h-3.5 flex-shrink-0 text-accent"
                 fill="currentColor"
                 viewBox="0 0 16 16"
               >
                 <path d="M1.75 1A1.75 1.75 0 000 2.75v10.5C0 14.216.784 15 1.75 15h12.5A1.75 1.75 0 0016 13.25v-8.5A1.75 1.75 0 0014.25 3H7.5a.25.25 0 01-.2-.1l-.9-1.2C6.07 1.26 5.55 1 5 1H1.75z"/>
               </svg>
-              <span className="text-xs font-semibold text-[#24292f] dark:text-[#e6edf3] truncate">{node.name}</span>
+              <span className="text-xs font-semibold text-fg truncate">{node.name}</span>
             </div>
             <div style={{ display: isCollapsed ? 'none' : 'block' }}>
               {node.children.map(child => renderTreeNode(child, depth + 1))}
@@ -191,8 +185,8 @@ export default function FileList({ files, selectedFile, onSelectFile, displayMod
           }}
           className={`flex items-center gap-2 px-1.5 py-0.5 rounded cursor-pointer text-xs break-all transition-colors
             ${selectedFile?.path === file.path
-              ? 'bg-[#ddf4ff] dark:bg-[#1c2d41] border-l-2 border-l-[#0969da] dark:border-l-[#1f6feb] -ml-[2px] pl-[calc(0.375rem-2px)] text-[#0969da] dark:text-[#58a6ff] font-medium'
-              : 'text-[#24292f] dark:text-[#adbac7] hover:bg-[#f6f8fa] dark:hover:bg-[#21262d]'
+              ? 'bg-accent-muted border-l-2 border-l-accent -ml-[2px] pl-[calc(0.375rem-2px)] text-accent-emphasis font-medium'
+              : 'text-fg hover:bg-surface-raised'
             }`}
         >
           <input
@@ -203,17 +197,16 @@ export default function FileList({ files, selectedFile, onSelectFile, displayMod
               onToggleReviewed(file)
             }}
             onClick={(e) => { e.stopPropagation(); }}
-            className="w-4 h-4 rounded border-[#d0d7de] dark:border-[#30363d]
-                       text-[#2188ff] dark:text-[#58a6ff] cursor-pointer flex-shrink-0
-                       focus:ring-2 focus:ring-[#0969da] dark:focus:ring-[#1f6feb]"
+            className="w-4 h-4 rounded border-edge text-accent cursor-pointer flex-shrink-0
+                       focus:ring-2 focus:ring-accent"
             title="Mark as reviewed"
           />
           <span className={`flex-1 min-w-0 ${reviewedFiles.has(file.path) ? 'opacity-60' : ''}`}>
             {file.path}
           </span>
           <div className="flex items-center gap-1 text-xs flex-shrink-0">
-            <span className="text-[#28a745] dark:text-[#2ea043]">+{file.additions}</span>
-            <span className="text-[#d73a49] dark:text-[#f85149]">-{file.deletions}</span>
+            <span className="text-success">+{file.additions}</span>
+            <span className="text-danger">-{file.deletions}</span>
           </div>
         </div>
       ))}

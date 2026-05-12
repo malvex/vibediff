@@ -31,7 +31,7 @@ const AddCommentButton = ({ onDragStart }: { onDragStart?: () => void }): React.
       e.preventDefault()
       onDragStart?.()
     }}
-    className="absolute -left-[26px] top-0 w-[22px] h-5 bg-[#0366d6] dark:bg-[#1f6feb] text-white rounded-[3px] text-base leading-5 cursor-pointer hidden group-hover:block hover:bg-[#0256c7] dark:hover:bg-[#388bfd] hover:scale-110 transition-transform p-0"
+    className="absolute -left-[26px] top-0 w-[22px] h-5 bg-accent text-accent-fg rounded-[3px] text-base leading-5 cursor-pointer hidden group-hover:block hover:bg-accent-emphasis hover:scale-110 transition-transform p-0"
   >
     +
   </button>
@@ -52,14 +52,11 @@ const DiffLine = React.memo(({
   const isAddition = line.type === 'add' || line.type === 'added'
   const isDeletion = line.type === 'delete' || line.type === 'deleted'
 
-  // Highlight the code content
   const highlightedContent = useMemo(() => {
     const language = getLanguageFromFilename(filename)
-    // If content is empty, return empty string
     if (!line.content) {
       return ''
     }
-    // Always highlight to preserve formatting
     return highlightCode(line.content, language)
   }, [line.content, filename])
 
@@ -71,12 +68,12 @@ const DiffLine = React.memo(({
         onMouseLeave={onMouseLeave}
       >
         {/* Old Line Number */}
-        <td className={`line-num w-[50px] min-w-[50px] px-[10px] text-center select-none border-r border-[#e1e4e8] dark:border-[#30363d] ${isDeletion ? 'line-num-deletion' : ''}`}>
+        <td className={`line-num w-[50px] min-w-[50px] px-[10px] text-center select-none border-r border-edge ${isDeletion ? 'line-num-deletion' : ''}`}>
           {line.oldLineNumber ?? line.oldNumber ?? ''}
         </td>
 
         {/* New Line Number */}
-        <td className={`line-num w-[50px] min-w-[50px] px-[10px] text-center select-none border-r border-[#e1e4e8] dark:border-[#30363d] ${line.type === 'add' || line.type === 'added' ? 'line-num-addition' : ''}`}>
+        <td className={`line-num w-[50px] min-w-[50px] px-[10px] text-center select-none border-r border-edge ${isAddition ? 'line-num-addition' : ''}`}>
           {line.newLineNumber ?? line.newNumber ?? ''}
         </td>
 
@@ -95,17 +92,17 @@ const DiffLine = React.memo(({
     <>
       {isDeletion || line.type === 'normal' || line.type === 'context' ? (
         <>
-          <td className={`line-num w-[50px] min-w-[50px] px-[10px] text-center select-none border-r border-[#e1e4e8] dark:border-[#30363d] ${isDeletion ? 'line-num-deletion' : ''} ${isInSelection ? 'line-selected' : ''} ${isInCommentRange ? 'line-commented-range' : ''}`}>
+          <td className={`line-num w-[50px] min-w-[50px] px-[10px] text-center select-none border-r border-edge ${isDeletion ? 'line-num-deletion' : ''} ${isInSelection ? 'line-selected' : ''} ${isInCommentRange ? 'line-commented-range' : ''}`}>
             {line.oldLineNumber ?? line.oldNumber ?? ''}
           </td>
-          <td className={`line-code px-[10px] py-0 relative border-r-2 border-r-[#e1e4e8] dark:border-r-[#30363d] ${wrapLines ? 'whitespace-pre-wrap break-all' : 'whitespace-pre'} ${config.codeClass} ${isInSelection ? 'line-selected' : ''} ${isInCommentRange ? 'line-commented-range' : ''}`} data-prefix={config.prefix}>
+          <td className={`line-code px-[10px] py-0 relative border-r-2 border-r-edge ${wrapLines ? 'whitespace-pre-wrap break-all' : 'whitespace-pre'} ${config.codeClass} ${isInSelection ? 'line-selected' : ''} ${isInCommentRange ? 'line-commented-range' : ''}`} data-prefix={config.prefix}>
             <code className={`language-${getLanguageFromFilename(filename)}`} dangerouslySetInnerHTML={{ __html: highlightedContent }} />
             <AddCommentButton onDragStart={onDragStart} />
           </td>
         </>
       ) : (
         <>
-          <td className={`line-num w-[50px] min-w-[50px] px-[10px] text-center select-none border-r border-[#e1e4e8] dark:border-[#30363d] ${isAddition ? 'line-num-addition' : ''} ${isInSelection ? 'line-selected' : ''} ${isInCommentRange ? 'line-commented-range' : ''}`}>
+          <td className={`line-num w-[50px] min-w-[50px] px-[10px] text-center select-none border-r border-edge ${isAddition ? 'line-num-addition' : ''} ${isInSelection ? 'line-selected' : ''} ${isInCommentRange ? 'line-commented-range' : ''}`}>
             {line.newLineNumber ?? line.newNumber ?? ''}
           </td>
           <td className={`line-code px-[10px] py-0 relative ${wrapLines ? 'whitespace-pre-wrap break-all' : 'whitespace-pre'} ${config.codeClass} ${isInSelection ? 'line-selected' : ''} ${isInCommentRange ? 'line-commented-range' : ''}`} data-prefix={config.prefix}>
