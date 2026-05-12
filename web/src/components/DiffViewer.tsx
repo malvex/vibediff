@@ -11,7 +11,6 @@ import { getButtonClassName } from '../utils/buttonStyles'
 import { Group, Panel, Separator } from 'react-resizable-panels'
 import FileList from './FileList'
 import FileDiff from './FileDiff'
-import CommentDialog from './CommentDialog'
 import FullFileModal from './FullFileModal'
 import HelpModal from './HelpModal'
 import DarkModeToggle from './DarkModeToggle'
@@ -32,7 +31,7 @@ export default function DiffViewer({ className = '' }: DiffViewerProps): React.R
   const [fullFileModal, setFullFileModal] = useState<string | null>(null)
   const [fileViewMode, setFileViewMode] = useState<'list' | 'tree'>('list')
   const [collapsedFolders, setCollapsedFolders] = useState<Set<string>>(new Set())
-  const [wrapLines, setWrapLines] = useState<boolean>(false)
+  const [wrapLines, setWrapLines] = useState<boolean>(true)
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [showHelp, setShowHelp] = useState(false)
   const [selectedRevision, setSelectedRevision] = useState<string | null>(null)
@@ -50,7 +49,6 @@ export default function DiffViewer({ className = '' }: DiffViewerProps): React.R
     setIsRefreshing(true)
     refetch()
     refetchRevisions()
-    // Clear refreshing indicator after a short delay
     const timer = setTimeout(() => { setIsRefreshing(false); }, 500)
     return () => { clearTimeout(timer); }
   }, [lastUpdate, refetch, refetchRevisions])
@@ -99,23 +97,34 @@ export default function DiffViewer({ className = '' }: DiffViewerProps): React.R
   // Auto-select first file when data loads and validate reviewed files
   useEffect(() => {
     if (data?.files.length) {
-      // Validate reviewed files against current content
       validateReviewed(data.files)
 
       if (!selectedFile) {
         setSelectedFile(data.files[0])
       } else {
-        // Preserve selected file if it still exists
         const stillExists = data.files.find(f => f.path === selectedFile.path)
         if (stillExists) {
           setSelectedFile(stillExists)
         } else {
-          // File was deleted, select first file
           setSelectedFile(data.files[0])
         }
       }
     }
   }, [data, selectedFile, validateReviewed])
+
+  const handleToggleReviewed = (file: FileDiffType): void => {
+    const wasReviewed = reviewedFiles.has(file.path)
+    toggleReviewed(file)
+    if (!wasReviewed) {
+      setCollapsedFiles(prev => new Set([...prev, file.path]))
+    } else {
+      setCollapsedFiles(prev => {
+        const newSet = new Set(prev)
+        newSet.delete(file.path)
+        return newSet
+      })
+    }
+  }
 
   // Keyboard navigation
   useEffect(() => {
@@ -140,7 +149,7 @@ export default function DiffViewer({ className = '' }: DiffViewerProps): React.R
         }
       } else if (e.key === 'r' && selectedFile && !e.metaKey && !e.ctrlKey) {
         e.preventDefault()
-        toggleReviewed(selectedFile)
+        handleToggleReviewed(selectedFile)
       } else if (e.key === '?' && !e.metaKey && !e.ctrlKey && !e.shiftKey) {
         e.preventDefault()
         setShowHelp(true)
@@ -149,7 +158,7 @@ export default function DiffViewer({ className = '' }: DiffViewerProps): React.R
 
     document.addEventListener('keydown', handleKeyDown)
     return () => { document.removeEventListener('keydown', handleKeyDown); }
-  }, [data, selectedFile, toggleReviewed])
+  }, [data, selectedFile, handleToggleReviewed])
 
   const toggleFileCollapse = (filePath: string): void => {
     setCollapsedFiles(prev => {
@@ -165,10 +174,8 @@ export default function DiffViewer({ className = '' }: DiffViewerProps): React.R
 
   const toggleAllCollapse = (): void => {
     if (collapsedFiles.size === data?.files.length) {
-      // All collapsed, expand all
       setCollapsedFiles(new Set())
     } else {
-      // Some or none collapsed, collapse all
       setCollapsedFiles(new Set(data?.files.map(f => f.path) ?? []))
     }
   }
@@ -185,7 +192,7 @@ export default function DiffViewer({ className = '' }: DiffViewerProps): React.R
   if (loading) {
     return (
       <div className={`flex justify-center items-center h-screen ${className}`}>
-        <div className="text-gray-500 dark:text-gray-400">Loading diff...</div>
+        <div className="text-fg-subtle">Loading diff...</div>
       </div>
     )
   }
@@ -202,20 +209,23 @@ export default function DiffViewer({ className = '' }: DiffViewerProps): React.R
 
   return (
     <>
-      <div className={`flex flex-col h-screen bg-white dark:bg-[#0d1117] ${viewMode === 'split' ? 'split-view-active' : ''}`}>
-      {/* Header - GitHub style dark header */}
-      <header className="bg-[#24292e] dark:bg-[#161b22] text-white border-b border-[#e1e4e8] dark:border-[#30363d]">
+      <div className={`flex flex-col h-screen bg-surface ${viewMode === 'split' ? 'split-view-active' : ''}`}>
+      {/* Header */}
+      <header className="bg-surface-raised border-b border-edge">
         <div className="px-4 py-1.5">
           <div className="flex items-center justify-between flex-nowrap">
             <div className="flex items-center gap-2">
-              <h1 className="text-lg font-semibold">VibeDiff</h1>
+              <h1 className="text-lg font-semibold text-fg">VibeDiff</h1>
+              <span className="text-[10px] font-mono px-1.5 py-0.5 rounded-full bg-surface-inset text-fg-muted border border-edge uppercase tracking-wide">
+                {backend}
+              </span>
               <DirectorySwitcher
                 currentDirectory={currentDirectory}
                 onDirectoryChange={handleDirectoryChange}
                 onValidate={validateDirectory}
               />
               {isRefreshing && (
-                <span className="text-sm text-gray-400 animate-pulse">Updating...</span>
+                <span className="text-sm text-fg-subtle animate-pulse">Updating...</span>
               )}
             </div>
             <div className="flex items-center gap-2 flex-nowrap whitespace-nowrap">
@@ -239,7 +249,7 @@ export default function DiffViewer({ className = '' }: DiffViewerProps): React.R
                   ))}
                 </div>
 
-                <div className="border-l border-white/20 h-5" />
+                <div className="border-l border-edge h-5" />
               </>
             )}
 
@@ -259,7 +269,7 @@ export default function DiffViewer({ className = '' }: DiffViewerProps): React.R
               </button>
             </div>
 
-            <div className="border-l border-white/20 h-5" />
+            <div className="border-l border-edge h-5" />
 
             {/* Display Mode Toggle */}
             <div className="flex">
@@ -322,12 +332,12 @@ export default function DiffViewer({ className = '' }: DiffViewerProps): React.R
         <Panel defaultSize={20} minSize={15} maxSize={600} id="sidebar">
           <Group orientation="vertical" className="h-full" id="sidebar-group">
             <Panel defaultSize={60} minSize={20} id="file-panel">
-              <div className="h-full bg-[#fafbfc] dark:bg-[#0d1117] border-r border-[#e1e4e8] dark:border-[#30363d] p-2 overflow-y-auto">
+              <div className="h-full bg-surface-raised border-r border-edge p-2 overflow-y-auto">
                 <div className="flex items-center justify-between mb-2">
-                  <h3 className="text-xs font-semibold text-[#24292e] dark:text-[#c9d1d9]">
+                  <h3 className="text-xs font-semibold text-fg">
                     Files changed ({data?.files.length ?? 0})
                     {reviewedFiles.size > 0 && (
-                      <span className="ml-2 text-xs text-[#57606a] dark:text-[#8b949e]">
+                      <span className="ml-2 text-xs text-fg-muted">
                         ({reviewedFiles.size} reviewed)
                       </span>
                     )}
@@ -337,9 +347,9 @@ export default function DiffViewer({ className = '' }: DiffViewerProps): React.R
                     {reviewedFiles.size > 0 && (
                       <button
                         onClick={clearReviewed}
-                        className="text-xs px-1.5 py-0.5 text-[#57606a] dark:text-[#8b949e]
-                                   hover:text-[#24292e] dark:hover:text-[#c9d1d9]
-                                   hover:bg-[rgba(0,0,0,0.03)] dark:hover:bg-[rgba(255,255,255,0.05)]
+                        className="text-xs px-1.5 py-0.5 text-fg-muted
+                                   hover:text-fg
+                                   hover:bg-surface-inset
                                    rounded transition-colors"
                         title="Clear all reviewed marks"
                       >
@@ -349,7 +359,7 @@ export default function DiffViewer({ className = '' }: DiffViewerProps): React.R
 
                     <button
                       onClick={() => { setFileViewMode(fileViewMode === 'list' ? 'tree' : 'list'); }}
-                      className="text-base p-0.5 text-[#586069] dark:text-[#8b949e] hover:text-[#24292e] dark:hover:text-[#c9d1d9] transition-colors cursor-pointer bg-transparent border-none opacity-70 hover:opacity-100"
+                      className="text-base p-0.5 text-fg-muted hover:text-fg transition-colors cursor-pointer bg-transparent border-none opacity-70 hover:opacity-100"
                       title={fileViewMode === 'list' ? 'Switch to tree view' : 'Switch to list view'}
                     >
                       {fileViewMode === 'list' ? '◈' : '☰'}
@@ -377,20 +387,20 @@ export default function DiffViewer({ className = '' }: DiffViewerProps): React.R
                     })
                   }}
                   reviewedFiles={reviewedFiles}
-                  onToggleReviewed={toggleReviewed}
+                  onToggleReviewed={handleToggleReviewed}
                 />
               </div>
             </Panel>
 
             <Separator
-              className="h-1.5 bg-[#d0d7de] dark:bg-[#30363d] hover:bg-[#0969da] dark:hover:bg-[#58a6ff] transition-colors"
+              className="h-1.5 bg-edge hover:bg-accent transition-colors"
               data-separator="resize-handle"
             />
 
             <Panel defaultSize={40} minSize={15} id="revision-panel">
-              <div className="h-full bg-[#fafbfc] dark:bg-[#0d1117] border-r border-[#e1e4e8] dark:border-[#30363d] overflow-y-auto">
+              <div className="h-full bg-surface-raised border-r border-edge overflow-y-auto">
                 <div className="px-2 pt-2 pb-1">
-                  <h3 className="text-xs font-semibold text-[#24292e] dark:text-[#c9d1d9]">
+                  <h3 className="text-xs font-semibold text-fg">
                     Revisions
                   </h3>
                 </div>
@@ -410,19 +420,19 @@ export default function DiffViewer({ className = '' }: DiffViewerProps): React.R
         </Panel>
 
         <Separator
-          className="w-1.5 bg-[#d0d7de] dark:bg-[#30363d] hover:bg-[#0969da] dark:hover:bg-[#58a6ff] transition-colors"
+          className="w-1.5 bg-edge hover:bg-accent transition-colors"
           data-separator="resize-handle"
         />
 
         {/* Main Content */}
         <Panel defaultSize={80} minSize={40} id="main">
-          <div className="h-full bg-white dark:bg-[#0d1117] p-3 overflow-y-auto">
+          <div className="h-full bg-surface p-3 overflow-y-auto">
         {(() => {
           // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
           if (loading) {
             return (
               <div className="flex items-center justify-center h-full">
-                <p className="text-gray-500 dark:text-gray-400">Loading...</p>
+                <p className="text-fg-subtle">Loading...</p>
               </div>
             )
           }
@@ -436,7 +446,7 @@ export default function DiffViewer({ className = '' }: DiffViewerProps): React.R
           if (!data || data.files.length === 0) {
             return (
               <div className="flex items-center justify-center h-full">
-                <p className="text-sm text-[#8b949e] dark:text-[#484f58]">No changes to display</p>
+                <p className="text-sm text-fg-subtle">No changes to display</p>
               </div>
             )
           }
@@ -458,6 +468,20 @@ export default function DiffViewer({ className = '' }: DiffViewerProps): React.R
                 wrapLines={wrapLines}
                 diffType={diffType}
                 selectedRevision={selectedRevision}
+                isReviewed={reviewedFiles.has(file.path)}
+                onToggleReviewed={() => { handleToggleReviewed(file); }}
+                commentCount={comments.filter(c => c.file === file.path).length}
+                activeComment={commentDialog?.file === file.path ? { line: commentDialog.line, lineEnd: commentDialog.lineEnd } : null}
+                onSubmitComment={(content) => {
+                  if (commentDialog) {
+                    void addComment(commentDialog.file, commentDialog.line, content, commentDialog.lineEnd).then(() => {
+                      setCommentDialog(null)
+                    }).catch((err: unknown) => {
+                      console.error('Failed to add comment:', err)
+                    })
+                  }
+                }}
+                onCancelComment={() => { setCommentDialog(null); }}
               />
             ))}
           </div>
@@ -479,37 +503,33 @@ export default function DiffViewer({ className = '' }: DiffViewerProps): React.R
               wrapLines={wrapLines}
               diffType={diffType}
               selectedRevision={selectedRevision}
+              isReviewed={reviewedFiles.has(selectedFile.path)}
+              onToggleReviewed={() => { handleToggleReviewed(selectedFile); }}
+              commentCount={comments.filter(c => c.file === selectedFile.path).length}
+              activeComment={commentDialog?.file === selectedFile.path ? { line: commentDialog.line, lineEnd: commentDialog.lineEnd } : null}
+              onSubmitComment={(content) => {
+                if (commentDialog) {
+                  void addComment(commentDialog.file, commentDialog.line, content, commentDialog.lineEnd).then(() => {
+                    setCommentDialog(null)
+                  }).catch((err: unknown) => {
+                    console.error('Failed to add comment:', err)
+                  })
+                }
+              }}
+              onCancelComment={() => { setCommentDialog(null); }}
             />
           </div>
             )
           }
           return (
             <div className="flex items-center justify-center h-full">
-              <p className="text-sm text-[#8b949e] dark:text-[#484f58]">Select a file to view changes</p>
+              <p className="text-sm text-fg-subtle">Select a file to view changes</p>
             </div>
           )
         })()}
           </div>
         </Panel>
       </Group>
-
-      {/* Comment Dialog */}
-      <CommentDialog
-        isOpen={!!commentDialog}
-        file={commentDialog?.file ?? ''}
-        line={commentDialog?.line ?? 0}
-        lineEnd={commentDialog?.lineEnd ?? 0}
-        onSubmit={(content) => {
-          if (commentDialog) {
-            void addComment(commentDialog.file, commentDialog.line, content, commentDialog.lineEnd).then(() => {
-              setCommentDialog(null)
-            }).catch((err: unknown) => {
-              console.error('Failed to add comment:', err)
-            })
-          }
-        }}
-        onClose={() => { setCommentDialog(null); }}
-      />
 
       {/* Full File Modal */}
       <FullFileModal

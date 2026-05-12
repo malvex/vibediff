@@ -2,6 +2,7 @@ import React, { useMemo, useCallback, useState, useEffect, useRef } from 'react'
 import type { FileDiff as FileDiffType, ViewMode, DiffLine as DiffLineType, DiffType, Comment } from '../types/diff'
 import DiffLine from './DiffLine'
 import CommentDisplay from './CommentDisplay'
+import InlineCommentForm from './InlineCommentForm'
 import { useRangeSelection } from '../hooks/useRangeSelection'
 
 interface SplitViewLineResult {
@@ -14,9 +15,9 @@ const EXPAND_STEP = 10
 
 interface GapInfo {
   key: string
-  gapStart: number // first hidden new line number
-  gapEnd: number   // last hidden new line number (may be Infinity for after-last gap)
-  hunkIndex: number // hunk index this gap appears after (-1 for before first hunk)
+  gapStart: number
+  gapEnd: number
+  hunkIndex: number
   position: 'before-first' | 'between' | 'after-last'
 }
 
@@ -44,21 +45,17 @@ function GapRow({ gap, gapData, isLoading, onExpandDown, onExpandUp, onCollapse,
 }): React.ReactElement | null {
   if (gapData.remainingHidden <= 0 && !gapData.isExpanded) return null
 
-  // Determine which buttons to show based on gap position:
-  // - before-first: only "Expand up" (expand upward from where the first change starts)
-  // - after-last: only "Expand down" (expand downward from where the last change ends)
-  // - between: both "Expand down" (from hunk above) and "Expand up" (from hunk below)
   const showExpandDown = gap.position === 'between' || gap.position === 'after-last'
   const showExpandUp = gap.position === 'between' || gap.position === 'before-first'
 
   return (
-    <tr className="bg-[#f6f8fa] dark:bg-[#161b22] border-y border-[#d0d7de] dark:border-[#30363d]">
+    <tr className="bg-surface-raised border-y border-edge">
       <td colSpan={colSpan} className="px-[10px] py-1 text-xs font-mono text-center">
         <span className="inline-flex items-center gap-3">
           {gapData.remainingHidden > 0 && showExpandDown && (
             <button
               onClick={onExpandDown}
-              className="text-[#0969da] dark:text-[#58a6ff] hover:underline cursor-pointer bg-transparent border-none"
+              className="text-accent-emphasis hover:underline cursor-pointer bg-transparent border-none"
               disabled={isLoading}
             >
               ↓ Expand down
@@ -66,10 +63,10 @@ function GapRow({ gap, gapData, isLoading, onExpandDown, onExpandUp, onCollapse,
           )}
 
           {isLoading && (
-            <span className="text-[#57606a] dark:text-[#8b949e]">Loading...</span>
+            <span className="text-fg-muted">Loading...</span>
           )}
           {!isLoading && gapData.remainingHidden > 0 && !gapData.unknownCount && (
-            <span className="text-[#57606a] dark:text-[#8b949e]">
+            <span className="text-fg-muted">
               {String(gapData.remainingHidden)} lines hidden
             </span>
           )}
@@ -77,7 +74,7 @@ function GapRow({ gap, gapData, isLoading, onExpandDown, onExpandUp, onCollapse,
           {gapData.remainingHidden > 0 && showExpandUp && (
             <button
               onClick={onExpandUp}
-              className="text-[#0969da] dark:text-[#58a6ff] hover:underline cursor-pointer bg-transparent border-none"
+              className="text-accent-emphasis hover:underline cursor-pointer bg-transparent border-none"
               disabled={isLoading}
             >
               ↑ Expand up
@@ -87,7 +84,7 @@ function GapRow({ gap, gapData, isLoading, onExpandDown, onExpandUp, onCollapse,
           {gapData.isExpanded && (
             <button
               onClick={onCollapse}
-              className="text-[#57606a] dark:text-[#8b949e] hover:text-[#24292e] dark:hover:text-[#c9d1d9] hover:underline cursor-pointer bg-transparent border-none"
+              className="text-fg-muted hover:text-fg hover:underline cursor-pointer bg-transparent border-none"
             >
               Collapse
             </button>
@@ -112,6 +109,12 @@ interface FileDiffProps {
   wrapLines?: boolean
   diffType?: DiffType
   selectedRevision?: string | null
+  isReviewed?: boolean
+  onToggleReviewed?: () => void
+  commentCount?: number
+  activeComment?: { line: number; lineEnd: number } | null
+  onSubmitComment?: (content: string) => void
+  onCancelComment?: () => void
 }
 
 export default function FileDiff({
@@ -127,21 +130,25 @@ export default function FileDiff({
   hideViewFullFile = false,
   wrapLines = false,
   diffType = 'all',
-  selectedRevision = null
+  selectedRevision = null,
+  isReviewed = false,
+  onToggleReviewed,
+  commentCount = 0,
+  activeComment = null,
+  onSubmitComment,
+  onCancelComment
 }: FileDiffProps): React.ReactElement {
   const [fullDiff, setFullDiff] = useState<FileDiffType | null>(null)
   const [isLoadingFull, setIsLoadingFull] = useState(false)
   const [gapExpansions, setGapExpansions] = useState<Record<string, GapExpansion>>({})
   const pendingExpandRef = useRef<{ gapKey: string; direction: 'up' | 'down' } | null>(null)
 
-  // Reset state when the file changes
   useEffect(() => {
     setFullDiff(null)
     setGapExpansions({})
     pendingExpandRef.current = null
   }, [file])
 
-  // Build line map from full diff (keyed by new line number)
   const fullLineMap = useMemo(() => {
     if (!fullDiff) return null
     const map = new Map<number, DiffLineType>()
@@ -156,14 +163,12 @@ export default function FileDiff({
     return map
   }, [fullDiff])
 
-  // Compute gap info from original hunks
   const gapInfos = useMemo((): GapInfo[] => {
     const hunks = file.hunks
     if (hunks.length === 0) return []
 
     const result: GapInfo[] = []
 
-    // Gap before first hunk
     const firstStart = hunks[0].newStart
     if (firstStart > 1) {
       result.push({
@@ -175,7 +180,6 @@ export default function FileDiff({
       })
     }
 
-    // Gaps between hunks
     for (let i = 0; i < hunks.length - 1; i++) {
       const current = hunks[i]
       const next = hunks[i + 1]
@@ -191,7 +195,6 @@ export default function FileDiff({
       }
     }
 
-    // Gap after last hunk (we don't know the file length yet, so use Infinity as placeholder)
     const lastHunk = hunks[hunks.length - 1]
     const lastEnd = lastHunk.newStart + lastHunk.newLines
     result.push({
@@ -205,7 +208,6 @@ export default function FileDiff({
     return result
   }, [file.hunks])
 
-  // Find gap that appears after a given hunk index (-1 = before first hunk)
   const getGapAfterHunk = useCallback((hunkIndex: number): GapInfo | undefined => {
     if (hunkIndex === -1) {
       return gapInfos.find(g => g.key === 'before')
@@ -213,7 +215,6 @@ export default function FileDiff({
     return gapInfos.find(g => g.key === `after-${String(hunkIndex)}`)
   }, [gapInfos])
 
-  // Find gap that appears after the last hunk
   const getGapAfterLastHunk = useCallback((): GapInfo | undefined => {
     return gapInfos.find(g => g.position === 'after-last')
   }, [gapInfos])
@@ -254,7 +255,6 @@ export default function FileDiff({
     })
   }, [])
 
-  // Apply pending expansion once full diff is loaded
   useEffect(() => {
     if (fullDiff && pendingExpandRef.current) {
       const { gapKey, direction } = pendingExpandRef.current
@@ -281,7 +281,6 @@ export default function FileDiff({
     })
   }, [])
 
-  // Get the max line number from the full diff (for after-last gap)
   const fullDiffMaxLine = useMemo(() => {
     if (!fullLineMap) return null
     let max = 0
@@ -291,21 +290,17 @@ export default function FileDiff({
     return max
   }, [fullLineMap])
 
-  // Get render data for a gap
   const getGapRenderData = useCallback((gap: GapInfo): GapRenderData => {
     const expansion = gapExpansions[gap.key] ?? { down: 0, up: 0 }
     const isExpanded = expansion.down > 0 || expansion.up > 0
 
-    // For the after-last gap, we need the actual file end from the full diff
     let effectiveGapEnd = gap.gapEnd
     if (gap.position === 'after-last') {
       if (fullDiffMaxLine != null && fullDiffMaxLine >= gap.gapStart) {
         effectiveGapEnd = fullDiffMaxLine
       } else if (!fullLineMap) {
-        // Haven't loaded full diff yet; show the gap row but with unknown count
         return { topLines: [], bottomLines: [], remainingHidden: 1, isExpanded, unknownCount: true }
       } else {
-        // Full diff loaded but no lines after last hunk — no gap to show
         return { topLines: [], bottomLines: [], remainingHidden: 0, isExpanded: false }
       }
     }
@@ -359,10 +354,8 @@ export default function FileDiff({
     onSelect: handleSelect
   })
 
-  // no-op handler for expanded context lines (not interactive)
   const noop = useCallback(() => { /* expanded context line */ }, [])
 
-  // Render expanded context lines for unified view
   const renderExpandedLinesUnified = useCallback((lines: DiffLineType[], keyPrefix: string): React.ReactNode[] => {
     return lines.map((line, i) => (
       <DiffLine
@@ -377,7 +370,6 @@ export default function FileDiff({
     ))
   }, [file.path, wrapLines, noop])
 
-  // Render expanded context lines for split view
   const renderExpandedLinesSplit = useCallback((lines: DiffLineType[], keyPrefix: string): React.ReactNode[] => {
     return lines.map((line, i) => (
       <tr key={`${keyPrefix}-${String(i)}`} className="group">
@@ -401,14 +393,12 @@ export default function FileDiff({
     ))
   }, [file.path, wrapLines, noop])
 
-  // Get gap that should appear before a given hunk
   const getGapBeforeHunk = useCallback((hunkIndex: number): GapInfo | undefined => {
     return hunkIndex === 0
       ? getGapAfterHunk(-1)
       : getGapAfterHunk(hunkIndex - 1)
   }, [getGapAfterHunk])
 
-  // Render a gap section (expanded lines + buttons)
   const renderGap = useCallback((gap: GapInfo, colSpan: number, isSplit: boolean): React.ReactNode => {
     const gapData = getGapRenderData(gap)
     const renderLines = isSplit ? renderExpandedLinesSplit : renderExpandedLinesUnified
@@ -431,42 +421,65 @@ export default function FileDiff({
   }, [getGapRenderData, renderExpandedLinesUnified, renderExpandedLinesSplit, isLoadingFull, handleExpand, handleCollapse])
 
   return (
-    <div id={`file-${file.path.replace(/\//g, '-')}`} className="border border-[#d1d5da] dark:border-[#30363d] rounded-md mb-3">
+    <div id={`file-${file.path.replace(/\//g, '-')}`} className="border border-edge rounded-lg mb-3">
       {/* File Header */}
       <div
-        className="bg-[#f6f8fa] dark:bg-[#161b22] px-3 py-2 border-b border-[#d1d5da] dark:border-[#30363d] flex items-center justify-between gap-2 cursor-pointer select-none"
+        className="bg-surface-raised px-3 py-2 border-b border-edge flex items-center justify-between gap-2 cursor-pointer select-none rounded-t-lg"
         onClick={onToggleCollapse}
       >
         <div className="flex items-center gap-2 flex-1 cursor-pointer" onClick={(e) => { e.stopPropagation(); onToggleCollapse(); }}>
           <svg
-            className={`w-3 h-3 text-[#57606a] dark:text-[#8b949e] transition-transform ${collapsed ? '' : 'rotate-90'}`}
+            className={`w-3 h-3 text-fg-muted transition-transform ${collapsed ? '' : 'rotate-90'}`}
             fill="currentColor"
             viewBox="0 0 16 16"
           >
             <path d="M6 4l4 4-4 4V4z"/>
           </svg>
 
-          <div className="flex-1">
-            <span className="text-sm font-semibold text-[#24292e] dark:text-[#c9d1d9] font-[-apple-system,BlinkMacSystemFont,'Segoe_UI',Helvetica,Arial,sans-serif]">
+          <div className="flex-1 flex items-center gap-2">
+            <span className={`text-sm font-semibold font-[-apple-system,BlinkMacSystemFont,'Segoe_UI',Helvetica,Arial,sans-serif] ${isReviewed ? 'text-fg-muted' : 'text-fg'}`}>
               {file.path}
             </span>
             {file.isRenamed && file.oldPath && (
-              <span className="text-xs text-gray-500 dark:text-gray-400 block">
+              <span className="text-xs text-fg-muted">
                 renamed from {file.oldPath}
               </span>
             )}
           </div>
 
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-3">
+          {commentCount > 0 && (
+            <span className="inline-flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-accent/10 text-accent-emphasis">
+              <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M7.5 8.25h9m-9 3H12m-9.75 1.51c0 1.6 1.123 2.994 2.707 3.227 1.087.16 2.185.283 3.293.369V21l4.076-4.076a1.526 1.526 0 011.037-.443 48.282 48.282 0 005.68-.494c1.584-.233 2.707-1.626 2.707-3.228V6.741c0-1.602-1.123-2.995-2.707-3.228A48.394 48.394 0 0012 3c-2.392 0-4.744.175-7.043.513C3.373 3.746 2.25 5.14 2.25 6.741v6.018z" />
+              </svg>
+              {commentCount}
+            </span>
+          )}
+
           <div className="flex items-center gap-2 text-sm">
-            <span className="text-[#28a745] dark:text-[#2ea043]">+{file.additions}</span>
-            <span className="text-[#d73a49] dark:text-[#f85149]">-{file.deletions}</span>
+            <span className="text-success">+{file.additions}</span>
+            <span className="text-danger">-{file.deletions}</span>
           </div>
+
+          {onToggleReviewed && (
+            <button
+              onClick={(e) => { e.stopPropagation(); onToggleReviewed(); }}
+              className={`px-2 py-[3px] text-xs font-medium border rounded-md transition-colors cursor-pointer ${
+                isReviewed
+                  ? 'bg-success/15 text-success border-success/30 hover:bg-success/25'
+                  : 'bg-surface-inset text-fg-muted border-edge hover:bg-edge hover:text-fg'
+              }`}
+              title={isReviewed ? 'Unmark as reviewed' : 'Mark as reviewed'}
+            >
+              {isReviewed ? '✓ Reviewed' : 'Review'}
+            </button>
+          )}
 
           {!hideViewFullFile && (
             <button
               onClick={(e) => { e.stopPropagation(); onViewFullFile(); }}
-              className="px-3 py-[3px] text-xs font-medium bg-[#fafbfc] dark:bg-[#21262d] text-[#24292e] dark:text-[#c9d1d9] border border-[rgba(27,31,35,.15)] dark:border-[#30363d] rounded-md hover:bg-[#f3f4f6] dark:hover:bg-[#30363d] transition-colors cursor-pointer"
+              className="px-3 py-[3px] text-xs font-medium bg-surface-inset text-fg border border-edge rounded-md hover:bg-edge transition-colors cursor-pointer"
             >
               View full file
             </button>
@@ -485,12 +498,11 @@ export default function FileDiff({
                   const gapBefore = getGapBeforeHunk(hunkIndex)
                   return (
                   <React.Fragment key={hunkIndex}>
-                    {/* Gap before this hunk */}
                     {gapBefore && renderGap(gapBefore, 3, false)}
 
                     {/* Hunk Header */}
                     <tr>
-                      <td colSpan={3} className="px-[10px] py-1 text-xs font-mono text-left" style={{ backgroundColor: 'var(--color-hunk-bg)', color: 'var(--color-hunk-text)' }}>
+                      <td colSpan={3} className="px-[10px] py-1 text-xs font-mono text-left bg-diff-hunk text-diff-hunk-fg">
                         {hunk.header}
                       </td>
                     </tr>
@@ -525,13 +537,21 @@ export default function FileDiff({
                               </td>
                             </tr>
                           )}
+                          {activeComment && lineNumber === activeComment.lineEnd && onSubmitComment && onCancelComment && (
+                            <InlineCommentForm
+                              line={activeComment.line}
+                              lineEnd={activeComment.lineEnd}
+                              onSubmit={onSubmitComment}
+                              onCancel={onCancelComment}
+                              colSpan={3}
+                            />
+                          )}
                         </React.Fragment>
                       )
                     })}
                   </React.Fragment>
                   )
                 })}
-                {/* Gap after last hunk */}
                 {(() => {
                   const gapAfterLast = getGapAfterLastHunk()
                   return gapAfterLast ? renderGap(gapAfterLast, 3, false) : null
@@ -545,12 +565,11 @@ export default function FileDiff({
                   const gapBefore = getGapBeforeHunk(hunkIndex)
                   return (
                   <React.Fragment key={hunkIndex}>
-                    {/* Gap before this hunk */}
                     {gapBefore && renderGap(gapBefore, 4, true)}
 
                     {/* Hunk Header */}
                     <tr>
-                      <td colSpan={4} className="px-[10px] py-1 text-xs font-mono text-left" style={{ backgroundColor: 'var(--color-hunk-bg)', color: 'var(--color-hunk-text)' }}>
+                      <td colSpan={4} className="px-[10px] py-1 text-xs font-mono text-left bg-diff-hunk text-diff-hunk-fg">
                         {hunk.header}
                       </td>
                     </tr>
@@ -580,11 +599,10 @@ export default function FileDiff({
                         comments,
                         lineNumber
                       }
-                    }, onDeleteComment)}
+                    }, onDeleteComment, activeComment && onSubmitComment && onCancelComment ? { activeComment, onSubmitComment, onCancelComment } : null)}
                   </React.Fragment>
                   )
                 })}
-                {/* Gap after last hunk */}
                 {(() => {
                   const gapAfterLast = getGapAfterLastHunk()
                   return gapAfterLast ? renderGap(gapAfterLast, 4, true) : null
@@ -598,15 +616,35 @@ export default function FileDiff({
   )
 }
 
-function renderSplitView(lines: DiffLineType[], renderLine: (line: DiffLineType, index: number) => SplitViewLineResult, onDeleteComment: (id: string) => Promise<void>): React.ReactNode[] {
+interface InlineCommentInfo {
+  activeComment: { line: number; lineEnd: number }
+  onSubmitComment: (content: string) => void
+  onCancelComment: () => void
+}
+
+function renderSplitView(lines: DiffLineType[], renderLine: (line: DiffLineType, index: number) => SplitViewLineResult, onDeleteComment: (id: string) => Promise<void>, inlineComment: InlineCommentInfo | null): React.ReactNode[] {
   const rows: React.ReactNode[] = []
   let i = 0
+
+  const maybeRenderInlineForm = (lineNumber: number, key: string): void => {
+    if (inlineComment && lineNumber === inlineComment.activeComment.lineEnd) {
+      rows.push(
+        <InlineCommentForm
+          key={`${key}-inline-form`}
+          line={inlineComment.activeComment.line}
+          lineEnd={inlineComment.activeComment.lineEnd}
+          onSubmit={inlineComment.onSubmitComment}
+          onCancel={inlineComment.onCancelComment}
+          colSpan={4}
+        />
+      )
+    }
+  }
 
   while (i < lines.length) {
     const line = lines[i]
 
     if (line.type === 'normal' || line.type === 'context') {
-      // Context line appears on both sides
       const result = renderLine(line, i)
       rows.push(
         <tr key={i} className="group">
@@ -614,7 +652,6 @@ function renderSplitView(lines: DiffLineType[], renderLine: (line: DiffLineType,
           {result.line}
         </tr>
       )
-      // Add comment row if there are comments
       if (result.comments.length > 0) {
         rows.push(
           <tr key={`${String(i)}-comment`}>
@@ -627,12 +664,11 @@ function renderSplitView(lines: DiffLineType[], renderLine: (line: DiffLineType,
           </tr>
         )
       }
+      maybeRenderInlineForm(result.lineNumber, String(i))
       i++
     } else if (line.type === 'delete' || line.type === 'deleted') {
-      // Check if next line is an add (change)
       const nextLine = i + 1 < lines.length ? lines[i + 1] : undefined
       if (nextLine?.type === 'add' || nextLine?.type === 'added') {
-        // Changed line
         const deleteResult = renderLine(line, i)
         const addResult = renderLine(nextLine, i + 1)
         rows.push(
@@ -641,7 +677,6 @@ function renderSplitView(lines: DiffLineType[], renderLine: (line: DiffLineType,
             {addResult.line}
           </tr>
         )
-        // Add comment rows for both sides if needed
         if (deleteResult.comments.length > 0 || addResult.comments.length > 0) {
           rows.push(
             <tr key={`${String(i)}-comment`}>
@@ -664,17 +699,17 @@ function renderSplitView(lines: DiffLineType[], renderLine: (line: DiffLineType,
             </tr>
           )
         }
+        maybeRenderInlineForm(deleteResult.lineNumber, String(i))
+        maybeRenderInlineForm(addResult.lineNumber, `${String(i)}-add`)
         i += 2
       } else {
-        // Deleted line only
         const result = renderLine(line, i)
         rows.push(
           <tr key={i} className="group">
             {result.line}
-            <td colSpan={2} className="bg-gray-50 dark:bg-gray-900/50"></td>
+            <td colSpan={2} className="bg-surface-raised"></td>
           </tr>
         )
-        // Add comment row if there are comments
         if (result.comments.length > 0) {
           rows.push(
             <tr key={`${String(i)}-comment`}>
@@ -684,26 +719,25 @@ function renderSplitView(lines: DiffLineType[], renderLine: (line: DiffLineType,
                   onDelete={(id) => { void onDeleteComment(id); }}
                 />
               </td>
-              <td colSpan={2} className="bg-gray-50 dark:bg-gray-900/50"></td>
+              <td colSpan={2} className="bg-surface-raised"></td>
             </tr>
           )
         }
+        maybeRenderInlineForm(result.lineNumber, String(i))
         i++
       }
     } else {
-      // Added line only (not part of a change)
       const result = renderLine(line, i)
       rows.push(
         <tr key={i} className="group">
-          <td colSpan={2} className="bg-gray-50 dark:bg-gray-900/50"></td>
+          <td colSpan={2} className="bg-surface-raised"></td>
           {result.line}
         </tr>
       )
-      // Add comment row if there are comments
       if (result.comments.length > 0) {
         rows.push(
           <tr key={`${String(i)}-comment`}>
-            <td colSpan={2} className="bg-gray-50 dark:bg-gray-900/50"></td>
+            <td colSpan={2} className="bg-surface-raised"></td>
             <td colSpan={2} className="p-0">
               <CommentDisplay
                 comments={result.comments}
@@ -713,6 +747,7 @@ function renderSplitView(lines: DiffLineType[], renderLine: (line: DiffLineType,
           </tr>
         )
       }
+      maybeRenderInlineForm(result.lineNumber, String(i))
       i++
     }
   }

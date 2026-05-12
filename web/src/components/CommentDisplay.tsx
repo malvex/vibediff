@@ -9,29 +9,30 @@ export default function CommentDisplay({ comments, onDelete }: CommentDisplayPro
   if (comments.length === 0) return null
 
   return (
-    <div className="px-6 py-2 bg-[#f6f8fa] dark:bg-[#161b22] border-t border-b border-[#dfe2e5] dark:border-[#30363d]">
+    <div className="sticky left-0 w-[calc(100vw-var(--sidebar-width,20%)-2rem)] mx-4 my-2 space-y-2">
       {comments.map(comment => (
-        <div key={comment.id} data-comment-id={comment.id} className="bg-white dark:bg-[#0d1117] border border-[#d1d5da] dark:border-[#30363d] rounded-md p-2 my-1 relative">
-          <div className="flex justify-between items-center pb-1 mb-1 border-b border-[#e1e4e8] dark:border-[#30363d]">
-            <div className="text-xs text-[#586069] dark:text-[#8b949e]">
+        <div
+          key={comment.id}
+          data-comment-id={comment.id}
+          className="bg-surface border border-edge rounded-lg border-l-[3px] border-l-accent overflow-hidden"
+        >
+          <div className="flex items-center justify-between px-3 py-1.5 bg-surface-raised">
+            <span className="text-xs text-fg-muted">
               {comment.lineEnd !== comment.line
-                ? `Comment on lines ${Math.abs(comment.line)} to ${Math.abs(comment.lineEnd)}`
-                : `Comment on line ${Math.abs(comment.line)}`}
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="text-xs text-[#586069] dark:text-[#8b949e] whitespace-nowrap">
-                {new Date(comment.createdAt).toLocaleString()}
-              </div>
-              <button
-                onClick={() => { onDelete(comment.id); }}
-                className="text-[rgba(27,31,35,.3)] dark:text-[rgba(139,148,158,.4)] hover:text-[#d73a49] dark:hover:text-[#f85149] text-xl leading-none p-0 w-5 h-5 flex items-center justify-center cursor-pointer border-none bg-transparent"
-                title="Delete comment"
-              >
-                ×
-              </button>
-            </div>
+                ? `Lines ${Math.abs(comment.line)}–${Math.abs(comment.lineEnd)}`
+                : `Line ${Math.abs(comment.line)}`}
+              <span className="mx-1.5 text-fg-subtle">·</span>
+              <span className="text-fg-subtle">{new Date(comment.createdAt).toLocaleString()}</span>
+            </span>
+            <button
+              onClick={() => { onDelete(comment.id); }}
+              className="text-fg-subtle hover:text-danger text-sm leading-none px-1 py-0.5 rounded hover:bg-danger/10 transition-colors cursor-pointer border-none bg-transparent"
+              title="Delete comment"
+            >
+              ×
+            </button>
           </div>
-          <div className="text-sm leading-[1.5] font-[-apple-system,BlinkMacSystemFont,'Segoe_UI',Helvetica,Arial,sans-serif]">
+          <div className="px-3 py-2 text-sm leading-relaxed text-fg whitespace-pre-wrap">
             {comment.content}
           </div>
         </div>

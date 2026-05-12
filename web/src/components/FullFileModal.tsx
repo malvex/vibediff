@@ -72,21 +72,21 @@ export default function FullFileModal({ isOpen, filePath, onClose, viewMode, get
   if (!isOpen) return null
 
   return (
-    <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-[rgba(0,0,0,0.5)] dark:bg-[rgba(0,0,0,0.8)] p-8" onClick={onClose}>
+    <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-surface-overlay p-8" onClick={onClose}>
       <div
-        className={`bg-white dark:bg-[#0d1117] rounded-md shadow-[0_8px_24px_rgba(0,0,0,0.12)] w-[90%] h-[90%] flex flex-col ${viewMode === 'split' ? 'max-w-[95%] w-[95%]' : 'max-w-[1200px]'}`}
+        className={`bg-surface rounded-lg shadow-2xl w-[90%] h-[90%] flex flex-col ${viewMode === 'split' ? 'max-w-[95%] w-[95%]' : 'max-w-[1200px]'}`}
         onClick={(e) => { e.stopPropagation(); }}
       >
         {/* Header */}
-        <div className="px-4 py-4 border-b border-[#e1e4e8] dark:border-[#30363d] flex items-center justify-between">
-          <h3 className="text-base font-semibold text-[#24292e] dark:text-[#c9d1d9]">
+        <div className="px-4 py-4 border-b border-edge flex items-center justify-between">
+          <h3 className="text-base font-semibold text-fg">
             Full file: {filePath}
           </h3>
           <button
             onClick={onClose}
-            className="px-3 py-[3px] text-xs font-medium bg-[#fafbfc] dark:bg-[#21262d] text-[#24292e] dark:text-[#c9d1d9]
-              border border-[rgba(27,31,35,.15)] dark:border-[#30363d] rounded-md
-              hover:bg-[#f3f4f6] dark:hover:bg-[#30363d] transition-colors cursor-pointer"
+            className="px-3 py-[3px] text-xs font-medium bg-surface-inset text-fg
+              border border-edge rounded-md
+              hover:bg-edge transition-colors cursor-pointer"
           >
             Close
           </button>
@@ -98,7 +98,7 @@ export default function FullFileModal({ isOpen, filePath, onClose, viewMode, get
             if (loading) {
               return (
                 <div className="flex justify-center items-center h-full">
-                  <div className="text-[#586069] dark:text-[#8b949e]">Loading full file...</div>
+                  <div className="text-fg-muted">Loading full file...</div>
                 </div>
               )
             }
@@ -112,7 +112,7 @@ export default function FullFileModal({ isOpen, filePath, onClose, viewMode, get
             if (!fileData) {
               return (
                 <div className="flex justify-center items-center h-full">
-                  <div className="text-[#586069] dark:text-[#8b949e]">No diff data available</div>
+                  <div className="text-fg-muted">No diff data available</div>
                 </div>
               )
             }
