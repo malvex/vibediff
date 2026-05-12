@@ -16,7 +16,6 @@ import (
 type Handler struct {
 	gitService  *git.Service
 	reviewStore *review.Store
-	format      string
 	watcher     interface {
 		SetWorkingDir(string)
 		SetBackend(git.VCSBackend)
@@ -32,10 +31,6 @@ func NewHandler(gitService *git.Service, reviewStore *review.Store, watcher inte
 		reviewStore: reviewStore,
 		watcher:     watcher,
 	}
-}
-
-func (h *Handler) SetFormat(format string) {
-	h.format = format
 }
 
 // writeJSON is a helper method to reduce repetitive JSON response code
@@ -130,17 +125,6 @@ func (h *Handler) AddComment(w http.ResponseWriter, r *http.Request) {
 	}
 
 	h.reviewStore.AddComment(&comment)
-
-	// Print immediately in text format
-	if h.format == "text" {
-		if comment.LineEnd != 0 && comment.LineEnd != comment.Line {
-			fmt.Printf("\n%s:%d-%d\n", comment.File, comment.Line, comment.LineEnd)
-		} else {
-			fmt.Printf("\n%s:%d\n", comment.File, comment.Line)
-		}
-		fmt.Printf("%s\n", comment.Content)
-	}
-
 	h.writeJSON(w, comment)
 }
 

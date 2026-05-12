@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"embed"
-	"encoding/json"
 	"flag"
 	"fmt"
 	"io/fs"
@@ -61,16 +60,9 @@ func main() {
 		port    = flag.Int("port", 8888, "Port to bind the server to")
 		debug   = flag.Bool("debug", false, "Enable debug logging")
 		version = flag.Bool("version", false, "Show version information")
-		format  = flag.String("format", "text", "Output format for review comments (text or json)")
 		noOpen  = flag.Bool("no-open", false, "Disable automatic browser opening")
 	)
 	flag.Parse()
-
-	// Validate format flag
-	if *format != "text" && *format != "json" {
-		fmt.Fprintf(os.Stderr, "Invalid format: %s. Must be 'text' or 'json'\n", *format)
-		os.Exit(1)
-	}
 
 	// Handle version flag
 	if *version {
@@ -113,7 +105,6 @@ func main() {
 	gitWatcher.Start()
 
 	handler := handlers.NewHandler(gitService, reviewStore, gitWatcher)
-	handler.SetFormat(*format)
 
 	r := mux.NewRouter()
 
@@ -219,22 +210,5 @@ func main() {
 	// Shutdown HTTP server
 	if err := srv.Shutdown(ctx); err != nil {
 		log.Printf("Server shutdown error: %v", err)
-	}
-
-	comments := reviewStore.GetAllComments()
-	if len(comments) > 0 {
-		if *format == "json" {
-			output, err := json.MarshalIndent(comments, "", "  ")
-			if err != nil {
-				fmt.Fprintf(os.Stderr, "Error marshaling comments: %v\n", err)
-			} else {
-				fmt.Println(string(output))
-			}
-		}
-		// For text format, comments are already printed when added
-	} else {
-		if *format != "json" {
-			fmt.Fprintln(os.Stderr, "\nNo review comments were added.")
-		}
 	}
 }
