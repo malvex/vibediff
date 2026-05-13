@@ -36,7 +36,7 @@ A local Git/Jujutsu diff viewer that runs entirely on your machine. Review your 
 ### Build From Source
 
 ```bash
-git clone https://github.com/malvex/vibediff.git
+git clone https://github.com/meain/vibediff.git
 cd vibediff
 task build
 # Binary will be created as ./vibediff
