@@ -589,6 +589,88 @@ func (s *Service) SetBackend(backend VCSBackend) {
 	s.backend = backend
 }
 
+// FileDiffText returns the raw unified-diff text for a single file at the
+// requested unchanged-context width. An empty revision selects the
+// working-copy diff (HEAD..working tree for git, parent..@ for jj).
+// Otherwise the diff is for that revision against its parent.
+//
+// Used by the MCP hunk provider to inline `git diff -U25` output alongside
+// each comment.
+func (s *Service) FileDiffText(file, revision string, contextLines int) (string, error) {
+	if s.backend == BackendJJ {
+		args := []string{"diff", "--git", fmt.Sprintf("--context=%d", contextLines)}
+		if revision != "" {
+			args = append(args, "-r", revision)
+		}
+		args = append(args, file)
+		out, err := s.runJJCommand(args...)
+		if err != nil {
+			return "", fmt.Errorf("file diff for %s@%s: %w", file, revision, err)
+		}
+		return out, nil
+	}
+
+	args := []string{"diff", fmt.Sprintf("-U%d", contextLines), "--no-color", "--no-ext-diff"}
+	if revision != "" {
+		args = append(args, revision+"~1", revision)
+	}
+	args = append(args, "--", file)
+	out, err := s.runGitCommand(args...)
+	if err != nil {
+		return "", fmt.Errorf("file diff for %s@%s: %w", file, revision, err)
+	}
+	return out, nil
+}
+
+// FileContentAtCommit returns the file's content at the given commit SHA.
+// Used for drift detection: comparing the pinned content against current
+// working copy at the comment's line range.
+func (s *Service) FileContentAtCommit(commit, file string) (string, error) {
+	if commit == "" {
+		return "", fmt.Errorf("missing commit")
+	}
+	if s.backend == BackendJJ {
+		out, err := s.runJJCommand("file", "show", "-r", commit, file)
+		if err != nil {
+			return "", fmt.Errorf("jj file show %s@%s: %w", file, commit, err)
+		}
+		return out, nil
+	}
+	out, err := s.runGitCommand("show", fmt.Sprintf("%s:%s", commit, file))
+	if err != nil {
+		return "", fmt.Errorf("git show %s:%s: %w", commit, file, err)
+	}
+	return out, nil
+}
+
+// ResolveCommit returns the underlying commit SHA for a revision identifier.
+// An empty identifier resolves to the current working-copy commit (HEAD for
+// git, @ for jj). Used to pin Comment.Commit at creation time so the
+// original anchor survives subsequent edits.
+func (s *Service) ResolveCommit(revisionID string) (string, error) {
+	if s.backend == BackendJJ {
+		rev := revisionID
+		if rev == "" {
+			rev = "@"
+		}
+		out, err := s.runJJCommand("log", "--no-graph", "-r", rev, "-T", "commit_id", "--limit", "1")
+		if err != nil {
+			return "", fmt.Errorf("resolving jj commit for %q: %w", revisionID, err)
+		}
+		return strings.TrimSpace(out), nil
+	}
+
+	rev := revisionID
+	if rev == "" {
+		rev = "HEAD"
+	}
+	out, err := s.runGitCommand("rev-parse", rev)
+	if err != nil {
+		return "", fmt.Errorf("resolving git commit for %q: %w", revisionID, err)
+	}
+	return strings.TrimSpace(out), nil
+}
+
 // SetWorkingDirUnsafe sets the working directory without validation (used by watcher)
 func (s *Service) SetWorkingDirUnsafe(dir string) {
 	s.workingDir = dir

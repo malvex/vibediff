@@ -40,7 +40,7 @@ export default function DiffViewer({ className = '' }: DiffViewerProps): React.R
   const [copyFeedback, setCopyFeedback] = useState(false)
   const { lastUpdate } = useWebSocketUpdates()
   const { currentDirectory, backend, changeDirectory, validateDirectory } = useDirectory()
-  const { comments, addComment, deleteComment, getCommentsForLine, getCommentRangeLines, formatCommentsForExport } = useComments(currentDirectory)
+  const { comments, addComment, deleteComment, resolveComment, reopenComment, getCommentsForLine, getCommentRangeLines, formatCommentsForExport } = useComments(currentDirectory, selectedRevision)
   const { reviewedFiles, toggleReviewed, clearReviewed, validateReviewed } = useReviewedFiles(currentDirectory)
   const { revisions, loading: revisionsLoading, refetch: refetchRevisions } = useRevisions()
 
@@ -465,6 +465,8 @@ export default function DiffViewer({ className = '' }: DiffViewerProps): React.R
                 getCommentsForLine={getCommentsForLine}
                 getCommentRangeLines={getCommentRangeLines}
                 onDeleteComment={deleteComment}
+                onResolveComment={resolveComment}
+                onReopenComment={reopenComment}
                 wrapLines={wrapLines}
                 diffType={diffType}
                 selectedRevision={selectedRevision}
@@ -540,6 +542,8 @@ export default function DiffViewer({ className = '' }: DiffViewerProps): React.R
         getCommentsForLine={getCommentsForLine}
         getCommentRangeLines={getCommentRangeLines}
         onDeleteComment={deleteComment}
+        onResolveComment={resolveComment}
+        onReopenComment={reopenComment}
         onAddComment={(file, line, content, lineEnd) => {
           void addComment(file, line, content, lineEnd).catch((err: unknown) => {
             console.error('Failed to add comment:', err)

@@ -40,8 +40,7 @@ export default function InlineCommentForm({ line, lineEnd, onSubmit, onCancel, c
   return (
     <tr>
       <td colSpan={colSpan} className="p-0">
-        <div className="sticky left-0 w-[calc(100vw-var(--sidebar-width,20%)-2rem)]">
-          <div className="mx-3 my-1.5 rounded-lg border border-accent/30 bg-accent-muted/30 overflow-hidden">
+        <div className="mx-3 my-1.5 rounded-lg border border-accent/30 bg-accent-muted/30 overflow-hidden">
             <div className="px-3 py-1.5 border-b border-accent/20 flex items-center justify-between">
               <span className="text-xs font-medium text-fg-muted">{rangeLabel}</span>
               <div className="flex items-center gap-3">
@@ -82,7 +81,6 @@ export default function InlineCommentForm({ line, lineEnd, onSubmit, onCancel, c
               </button>
             </div>
           </div>
-        </div>
       </td>
     </tr>
   )

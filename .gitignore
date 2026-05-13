@@ -1,6 +1,6 @@
-# Binaries
-vibediff
-vibediff-*
+# Binaries (root-anchored so docs/vibediff-*.md is not matched)
+/vibediff
+/vibediff-*
 *.exe
 *.dll
 *.so

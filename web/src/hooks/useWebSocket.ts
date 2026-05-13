@@ -5,7 +5,7 @@ interface WSMessage {
   timestamp: number
 }
 
-export function useWebSocket(onUpdate: () => void): void {
+export function useWebSocket(onUpdate: () => void, onCommentUpdate?: () => void): void {
   const wsRef = useRef<WebSocket | null>(null)
   const reconnectTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const isConnectingRef = useRef(false)
@@ -16,6 +16,13 @@ export function useWebSocket(onUpdate: () => void): void {
   useEffect(() => {
     onUpdateRef.current = onUpdate
   }, [onUpdate])
+
+  // Mirror the same pattern for the optional comment-change callback.
+  // Refs avoid tearing down the connection when consumers re-render.
+  const onCommentUpdateRef = useRef(onCommentUpdate)
+  useEffect(() => {
+    onCommentUpdateRef.current = onCommentUpdate
+  }, [onCommentUpdate])
 
   useEffect(() => {
     const connectWebSocket = (): void => {
@@ -58,6 +65,10 @@ export function useWebSocket(onUpdate: () => void): void {
             setTimeout(() => {
               onUpdateRef.current()
             }, 300)
+          } else if (data.type === 'comment_changed') {
+            // Agent reply (or any server-side AddComment) — re-fetch
+            // comments without paying for a diff refresh.
+            onCommentUpdateRef.current?.()
           }
         } catch (error) {
           console.error('Error parsing WebSocket message:', error)

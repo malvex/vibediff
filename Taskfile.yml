@@ -41,6 +41,20 @@ tasks:
     cmds:
       - go install -ldflags "{{.LDFLAGS}}"
 
+  install-command:
+    desc: Install the /vibediff slash command for Claude Code at user scope
+    cmds:
+      - mkdir -p $HOME/.claude/commands
+      - cp docs/vibediff-command.md $HOME/.claude/commands/vibediff.md
+      - echo "Installed /vibediff at $HOME/.claude/commands/vibediff.md"
+
+  install-watch-command:
+    desc: Install the /vibediff-watch slash command for Claude Code at user scope
+    cmds:
+      - mkdir -p $HOME/.claude/commands
+      - cp docs/vibediff-watch-command.md $HOME/.claude/commands/vibediff-watch.md
+      - echo "Installed /vibediff-watch at $HOME/.claude/commands/vibediff-watch.md"
+
   test:
     desc: Run tests
     cmds:

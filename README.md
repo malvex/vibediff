@@ -30,6 +30,10 @@ A local Git/Jujutsu diff viewer that runs entirely on your machine. Review your 
 - ⌨️ Keyboard shortcuts for navigation (j/k, r to toggle reviewed, ? for help)
 - 🔧 Supports both Git and Jujutsu (jj) repositories
 - 📌 Sticky file diff headers for easy navigation
+- 🤖 Embedded MCP server: Claude Code can read comments, post threaded replies, and act on them without copy/paste
+- 📡 Watch-loop mode: a long-poll MCP tool parks Claude inside `wait_for_comment`; new UI comments wake it without any further terminal input
+- 🧵 Threaded comments with author badges (user / agent) and status (open / resolved)
+- 📍 Comments pinned to the revision and commit SHA they were made against
 
 ## Installation
 
@@ -57,12 +61,184 @@ task build
 
 4. **Copy comments** using the "Copy Comments" button to get markdown-formatted review notes for AI assistants or team discussions
 
-### AI-Powered Workflow
+### AI-Powered Workflow (copy/paste)
+
+The original flow, still available for users who don't want any MCP wiring:
 
 1. **Review and annotate** your changes in VibeDiff
 2. **Copy comments** as markdown using the copy button
 3. **Paste into your AI assistant** with instructions to implement the changes
 4. **Re-run VibeDiff** to verify the AI's changes and iterate
+
+### Claude Code Integration (MCP)
+
+VibeDiff also embeds a Model Context Protocol (MCP) server so Claude Code
+can read open comments, post threaded replies, and re-fetch diff hunks
+without you ever copy/pasting. The user comments in the browser; the
+agent reads them in the terminal. Agent replies appear threaded under
+the original comment in the UI.
+
+#### Setup (one-time)
+
+1. **Wire Claude to VibeDiff.** Drop a `.mcp.json` at the root of the
+   repo you want to review. See `docs/mcp-json-example.md` for the
+   exact contents — minimally:
+
+   ```json
+   {
+     "mcpServers": {
+       "vibediff": {
+         "type": "http",
+         "url": "http://localhost:8888/mcp"
+       }
+     }
+   }
+   ```
+
+   Commit this file so your team gets the same wiring.
+
+2. **(Optional) Install the `/vibediff` slash command.** From the
+   VibeDiff repo:
+
+   ```bash
+   task install-command
+   ```
+
+   This copies `docs/vibediff-command.md` to
+   `~/.claude/commands/vibediff.md`. Typing `/vibediff` in a Claude
+   session pulls open comments and frames a fix-pass prompt.
+
+3. **(Optional) Install the `/vibediff-watch` slash command.** For
+   watch mode — Claude parks in a `wait_for_comment` long-poll and
+   reacts to new UI comments without further prompting:
+
+   ```bash
+   task install-watch-command
+   ```
+
+   This copies `docs/vibediff-watch-command.md` to
+   `~/.claude/commands/vibediff-watch.md`. Type `/vibediff-watch` at
+   the start of a Claude session to enter the watch loop.
+
+4. **(Optional) Install the auto-pull hook.** If you want open
+   comments injected into Claude's context on every prompt you submit
+   — no `/vibediff` typing needed — follow `docs/hook-recipe.md` to
+   add a `UserPromptSubmit` hook to `~/.claude/settings.json`.
+
+The two slash commands and the auto-pull hook are independent.
+Install whichever combination fits your workflow.
+
+#### Day-to-day loop
+
+1. **Start VibeDiff** in the repo you're reviewing:
+   ```bash
+   vibediff
+   ```
+
+2. **Launch Claude** in the same repo (a separate terminal):
+
+   ```bash
+   claude
+   ```
+
+   Run `/mcp` inside Claude to confirm `vibediff` shows as connected.
+
+3. **(Watch mode)** Type `/vibediff-watch` to enter the watch loop.
+   Claude calls `wait_for_comment` and parks. From this point on, new
+   UI comments wake Claude with no further terminal input. Skip this
+   step if you'd rather drive comment review with `/vibediff` on
+   demand.
+
+4. **Add a comment** in the VibeDiff browser tab (click `+` on a line
+   or drag across a range).
+
+5. **Engage the agent.** Depends on whether you entered watch mode:
+   - **Watch mode** (`/vibediff-watch` already typed): no action
+     required. Claude is parked in `wait_for_comment`; your new
+     comment wakes it and it acts on the next turn.
+   - **Pull mode** (no `/vibediff-watch`): type `/vibediff`
+     (optionally with steering context like
+     `/vibediff focus only on the security comments`), submit any
+     prompt if you installed the `UserPromptSubmit` hook, or ask
+     explicitly: "what's open in vibediff?"
+
+6. **Refresh VibeDiff.** Agent replies appear as threaded children of
+   your original comment with an `Agent` badge. The agent's code edits
+   are picked up by the file watcher and the diff view refreshes.
+
+7. **Resolve.** Click ✓ on the parent comment to mark the thread
+   resolved. Click ↺ to reopen. **Resolution is user-only** — the agent
+   has no tool to flip status.
+
+#### What's on the wire
+
+The MCP server exposes:
+
+- **Tools**
+  - `list_open_comments` — every open comment, each with its
+    pinned-commit diff hunk (±25 lines of unchanged context) and a
+    `drifted` flag if the working copy has changed at the anchor.
+  - `reply_to_comment(parent_id, content)` — append an agent reply.
+    Use when you have a question, are leaving a record, or disagree.
+  - `delete_comment(comment_id)` — remove a thread (root + replies)
+    after acting on the request. Default outcome for unambiguous
+    comments the agent has completed — the user sees the comment
+    vanish.
+  - `get_full_hunk(comment_id)` — re-fetch the hunk for one comment.
+  - `wait_for_comment(since_id?, timeout_sec?)` — block until a new
+    user-authored open comment lands with `ID > since_id`, then return
+    the batch. Returns an empty array on timeout. Drives watch mode.
+- **Resources**
+  - `comments://open` — readable via `@`-mention or `resources/read`.
+
+#### HTTP endpoints (used by the hook recipe and external scripts)
+
+- `GET /api/review/comments` — all comments
+- `GET /api/review/comments/open` — comments with `status=open`
+- `GET /api/review/comments/resolved` — comments with `status=resolved`
+- `GET /api/review/comments/latest` — single most recently created open
+  comment, or 404 if none
+- `POST /api/review/comment/{id}/resolve` — mark resolved (user UI)
+- `POST /api/review/comment/{id}/reopen` — reopen (user UI)
+
+#### Smoke test (skip Claude)
+
+Verify the MCP server is reachable:
+
+```bash
+curl -s -X POST http://localhost:8888/mcp \
+  -H 'Content-Type: application/json' \
+  -H 'Accept: application/json,text/event-stream' \
+  -d '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"test","version":"0"}}}'
+```
+
+Should return a JSON-RPC result with
+`serverInfo: {"name":"vibediff","version":"0.1.0"}`.
+
+Add a comment in the UI, then:
+
+```bash
+curl -s http://localhost:8888/api/review/comments/open
+```
+
+You should see the comment as JSON.
+
+#### Troubleshooting
+
+- **`/mcp` in Claude shows no servers, or vibediff disconnected.**
+  Check `.mcp.json` is at the repo root and points at the right port.
+  Confirm vibediff is running. Try `vibediff -debug` for verbose logs.
+- **Second `claude` session refuses to connect to MCP.** That's the
+  1:1 enforcement — only one Claude session per VibeDiff at a time.
+  Restart vibediff to clear the slot.
+- **Empty `diffHunk` in tool results.** No hunk overlaps the comment's
+  line range, or the underlying `git diff` / `jj diff` call failed.
+  Verify the commit the comment was pinned to is still reachable.
+- **Watch mode specifically.** See
+  [`docs/vibediff-watch-command.md`](docs/vibediff-watch-command.md)
+  for the watch-loop prompt body. Watch mode requires a single
+  `/vibediff-watch` invocation per session — Claude Code does not
+  trigger autonomous action without a turn boundary.
 
 ### Features Guide
 
@@ -86,7 +262,7 @@ task build
 
 ### Prerequisites
 
-- Go 1.22 or later
+- Go 1.25 or later
 - Node.js 18+ and npm
 - Task (optional, for running tasks)
 

@@ -19,6 +19,7 @@ import (
 
 	"github.com/malvex/vibediff/internal/git"
 	"github.com/malvex/vibediff/internal/handlers"
+	"github.com/malvex/vibediff/internal/mcp"
 	"github.com/malvex/vibediff/internal/review"
 	"github.com/malvex/vibediff/internal/watcher"
 )
@@ -100,6 +101,14 @@ func main() {
 	wsHub := handlers.NewWSHub()
 	go wsHub.Run()
 
+	// Notify the UI whenever a comment is added — covers agent replies
+	// posted through the MCP reply_to_comment tool, which otherwise
+	// leave the comment list stale until a manual refresh. Subscription
+	// is process-lifetime so the returned unsubscribe func is discarded.
+	_ = reviewStore.Subscribe(func(_ *review.Comment) {
+		wsHub.NotifyChange("comment_changed")
+	})
+
 	// Start file watcher
 	gitWatcher := watcher.NewGitWatcher(wsHub, backend)
 	gitWatcher.Start()
@@ -114,7 +123,12 @@ func main() {
 	r.HandleFunc("/api/diff/{file:.+}", handler.GetFileDiff).Methods("GET")
 	r.HandleFunc("/api/review/comment", handler.AddComment).Methods("POST")
 	r.HandleFunc("/api/review/comments", handler.GetComments).Methods("GET")
+	r.HandleFunc("/api/review/comments/open", handler.GetOpenComments).Methods("GET")
+	r.HandleFunc("/api/review/comments/resolved", handler.GetResolvedComments).Methods("GET")
+	r.HandleFunc("/api/review/comments/latest", handler.GetLatestComment).Methods("GET")
 	r.HandleFunc("/api/review/comment/{id}", handler.DeleteComment).Methods("DELETE")
+	r.HandleFunc("/api/review/comment/{id}/resolve", handler.ResolveComment).Methods("POST")
+	r.HandleFunc("/api/review/comment/{id}/reopen", handler.ReopenComment).Methods("POST")
 
 	// Directory management endpoints
 	r.HandleFunc("/api/directory", handler.GetDirectory).Methods("GET")
@@ -123,6 +137,11 @@ func main() {
 
 	// WebSocket endpoint for live updates
 	r.HandleFunc("/api/ws", handler.HandleWebSocket(wsHub)).Methods("GET")
+
+	// Embedded MCP server. Mounted on the same listener at /mcp; clients
+	// configure their .mcp.json with type "http" and url http://<host>/mcp.
+	mcpServer := mcp.New(reviewStore, gitService, mcp.NewGitHunkProvider(gitService))
+	r.PathPrefix("/mcp").Handler(mcpServer.Handler())
 
 	// Serve static assets from React build
 	webFS, err := fs.Sub(webFiles, "web/dist")
@@ -156,10 +175,14 @@ func main() {
 
 	addr := fmt.Sprintf("%s:%d", *host, *port)
 	srv := &http.Server{
-		Addr:         addr,
-		Handler:      r,
-		ReadTimeout:  15 * time.Second,
-		WriteTimeout: 15 * time.Second,
+		Addr:        addr,
+		Handler:     r,
+		ReadTimeout: 15 * time.Second,
+		// WriteTimeout is intentionally unset. The MCP wait_for_comment
+		// tool is a server-side long-poll that may legitimately hold a
+		// response open for up to 10 minutes; a global write deadline
+		// would cut those requests short. All routes serve localhost
+		// traffic, so the slow-client write-stall risk is negligible.
 	}
 
 	// Determine if we should open the browser
@@ -172,7 +195,7 @@ func main() {
 
 	go func() {
 		fmt.Fprintf(os.Stderr, "Starting VibeDiff server on http://%s\n", addr)
-		
+
 		// Open browser if enabled
 		if shouldOpen {
 			// Give the server a moment to start
@@ -184,7 +207,7 @@ func main() {
 				fmt.Fprintf(os.Stderr, "Opening browser at %s\n", url)
 			}
 		}
-		
+
 		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			log.Fatalf("Server failed to start: %v", err)
 		}

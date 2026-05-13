@@ -105,6 +105,8 @@ interface FileDiffProps {
   getCommentsForLine: (file: string, line: number) => Comment[]
   getCommentRangeLines?: (file: string, lineOrder: number[]) => Set<number>
   onDeleteComment: (id: string) => Promise<void>
+  onResolveComment?: (id: string) => Promise<void>
+  onReopenComment?: (id: string) => Promise<void>
   hideViewFullFile?: boolean
   wrapLines?: boolean
   diffType?: DiffType
@@ -127,6 +129,8 @@ export default function FileDiff({
   getCommentsForLine,
   getCommentRangeLines,
   onDeleteComment,
+  onResolveComment,
+  onReopenComment,
   hideViewFullFile = false,
   wrapLines = false,
   diffType = 'all',
@@ -533,6 +537,8 @@ export default function FileDiff({
                                 <CommentDisplay
                                   comments={comments}
                                   onDelete={(id) => { void onDeleteComment(id); }}
+                                  onResolve={onResolveComment ? (id) => { void onResolveComment(id); } : undefined}
+                                  onReopen={onReopenComment ? (id) => { void onReopenComment(id); } : undefined}
                                 />
                               </td>
                             </tr>
@@ -599,7 +605,7 @@ export default function FileDiff({
                         comments,
                         lineNumber
                       }
-                    }, onDeleteComment, activeComment && onSubmitComment && onCancelComment ? { activeComment, onSubmitComment, onCancelComment } : null)}
+                    }, onDeleteComment, activeComment && onSubmitComment && onCancelComment ? { activeComment, onSubmitComment, onCancelComment } : null, onResolveComment, onReopenComment)}
                   </React.Fragment>
                   )
                 })}
@@ -622,7 +628,16 @@ interface InlineCommentInfo {
   onCancelComment: () => void
 }
 
-function renderSplitView(lines: DiffLineType[], renderLine: (line: DiffLineType, index: number) => SplitViewLineResult, onDeleteComment: (id: string) => Promise<void>, inlineComment: InlineCommentInfo | null): React.ReactNode[] {
+function renderSplitView(
+  lines: DiffLineType[],
+  renderLine: (line: DiffLineType, index: number) => SplitViewLineResult,
+  onDeleteComment: (id: string) => Promise<void>,
+  inlineComment: InlineCommentInfo | null,
+  onResolveComment?: (id: string) => Promise<void>,
+  onReopenComment?: (id: string) => Promise<void>,
+): React.ReactNode[] {
+  const resolveCb = onResolveComment ? (id: string) => { void onResolveComment(id); } : undefined
+  const reopenCb = onReopenComment ? (id: string) => { void onReopenComment(id); } : undefined
   const rows: React.ReactNode[] = []
   let i = 0
 
@@ -659,6 +674,8 @@ function renderSplitView(lines: DiffLineType[], renderLine: (line: DiffLineType,
               <CommentDisplay
                 comments={result.comments}
                 onDelete={(id) => { void onDeleteComment(id); }}
+                onResolve={resolveCb}
+                onReopen={reopenCb}
               />
             </td>
           </tr>
@@ -685,6 +702,8 @@ function renderSplitView(lines: DiffLineType[], renderLine: (line: DiffLineType,
                   <CommentDisplay
                     comments={deleteResult.comments}
                     onDelete={(id) => { void onDeleteComment(id); }}
+                    onResolve={resolveCb}
+                    onReopen={reopenCb}
                   />
                 )}
               </td>
@@ -693,6 +712,8 @@ function renderSplitView(lines: DiffLineType[], renderLine: (line: DiffLineType,
                   <CommentDisplay
                     comments={addResult.comments}
                     onDelete={(id) => { void onDeleteComment(id); }}
+                    onResolve={resolveCb}
+                    onReopen={reopenCb}
                   />
                 )}
               </td>
@@ -717,6 +738,8 @@ function renderSplitView(lines: DiffLineType[], renderLine: (line: DiffLineType,
                 <CommentDisplay
                   comments={result.comments}
                   onDelete={(id) => { void onDeleteComment(id); }}
+                  onResolve={resolveCb}
+                  onReopen={reopenCb}
                 />
               </td>
               <td colSpan={2} className="bg-surface-raised"></td>
@@ -742,6 +765,8 @@ function renderSplitView(lines: DiffLineType[], renderLine: (line: DiffLineType,
               <CommentDisplay
                 comments={result.comments}
                 onDelete={(id) => { void onDeleteComment(id); }}
+                onResolve={resolveCb}
+                onReopen={reopenCb}
               />
             </td>
           </tr>

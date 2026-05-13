@@ -124,6 +124,15 @@ func (h *Handler) AddComment(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Pin the underlying commit SHA so the comment remains anchored to
+	// the code the user was looking at, even after working-copy edits.
+	// Best-effort: on resolve failure, leave Commit empty.
+	if comment.Commit == "" {
+		if sha, err := h.gitService.ResolveCommit(comment.Revision); err == nil {
+			comment.Commit = sha
+		}
+	}
+
 	h.reviewStore.AddComment(&comment)
 	h.writeJSON(w, comment)
 }
@@ -141,6 +150,27 @@ func (h *Handler) GetComments(w http.ResponseWriter, r *http.Request) {
 	h.writeJSON(w, comments)
 }
 
+// GetOpenComments returns all comments with status "open".
+func (h *Handler) GetOpenComments(w http.ResponseWriter, r *http.Request) {
+	h.writeJSON(w, h.reviewStore.GetCommentsByStatus(review.StatusOpen))
+}
+
+// GetResolvedComments returns all comments with status "resolved".
+func (h *Handler) GetResolvedComments(w http.ResponseWriter, r *http.Request) {
+	h.writeJSON(w, h.reviewStore.GetCommentsByStatus(review.StatusResolved))
+}
+
+// GetLatestComment returns the single most recently created open comment,
+// or 404 if none exist. Intended for hook scripts polling for new arrivals.
+func (h *Handler) GetLatestComment(w http.ResponseWriter, r *http.Request) {
+	c := h.reviewStore.LatestOpenComment()
+	if c == nil {
+		http.Error(w, "no open comments", http.StatusNotFound)
+		return
+	}
+	h.writeJSON(w, c)
+}
+
 func (h *Handler) DeleteComment(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	id := vars["id"]
@@ -150,6 +180,29 @@ func (h *Handler) DeleteComment(w http.ResponseWriter, r *http.Request) {
 	} else {
 		http.Error(w, "Comment not found", http.StatusNotFound)
 	}
+}
+
+// ResolveComment marks a comment as resolved. Driven by the UI; the agent
+// has no equivalent tool.
+func (h *Handler) ResolveComment(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	if !h.reviewStore.SetStatus(vars["id"], review.StatusResolved) {
+		http.Error(w, "Comment not found", http.StatusNotFound)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+// ReopenComment transitions a comment back to open. Useful when the user
+// resolved by accident or wants to re-engage the agent on a previously
+// closed thread.
+func (h *Handler) ReopenComment(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	if !h.reviewStore.SetStatus(vars["id"], review.StatusOpen) {
+		http.Error(w, "Comment not found", http.StatusNotFound)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
 }
 
 func (h *Handler) GetFullFileWithDiff(w http.ResponseWriter, r *http.Request) {

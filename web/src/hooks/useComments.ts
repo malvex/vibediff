@@ -1,19 +1,30 @@
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useCallback, useEffect, useContext } from 'react'
 import type { Comment } from '../types/diff'
+import { WebSocketContext } from '../contexts/WebSocketContext'
 
 interface UseCommentsReturn {
   comments: Comment[]
   addComment: (file: string, line: number, content: string, lineEnd: number) => Promise<Comment>
   deleteComment: (id: string) => Promise<void>
+  resolveComment: (id: string) => Promise<void>
+  reopenComment: (id: string) => Promise<void>
   getCommentsForLine: (file: string, line: number) => Comment[]
   getCommentRangeLines: (file: string, lineOrder: number[]) => Set<number>
   formatCommentsForExport: () => string
 }
 
-export function useComments(currentDirectory?: string): UseCommentsReturn {
+export function useComments(currentDirectory?: string, selectedRevision?: string | null): UseCommentsReturn {
   const [comments, setComments] = useState<Comment[]>([])
+  // Tolerate the absence of a WebSocketProvider (unit tests render
+  // useComments directly with renderHook). Outside a provider the value
+  // stays at zero, so the effect runs only on mount and on
+  // currentDirectory changes — matching pre-WS-broadcast behavior.
+  const wsContext = useContext(WebSocketContext)
+  const lastCommentUpdate = wsContext?.lastCommentUpdate ?? 0
 
-  // Fetch comments on mount and when directory changes
+  // Fetch comments on mount, on directory change, and whenever the
+  // server broadcasts a comment_changed event (e.g. an agent reply
+  // posted through the MCP reply_to_comment tool).
   useEffect(() => {
     const fetchComments = async (): Promise<void> => {
       try {
@@ -28,14 +39,20 @@ export function useComments(currentDirectory?: string): UseCommentsReturn {
     }
 
     void fetchComments()
-  }, [currentDirectory])
+  }, [currentDirectory, lastCommentUpdate])
 
   const addComment = useCallback(async (file: string, line: number, content: string, lineEnd: number) => {
     try {
+      // selectedRevision is empty for the working-copy view; the server resolves
+      // an empty revision to the working-copy commit (HEAD / @).
+      const body: Record<string, unknown> = { file, line, content, lineEnd }
+      if (selectedRevision) {
+        body.revision = selectedRevision
+      }
       const response = await fetch('/api/review/comment', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ file, line, content, lineEnd })
+        body: JSON.stringify(body)
       })
 
       if (!response.ok) {
@@ -49,6 +66,26 @@ export function useComments(currentDirectory?: string): UseCommentsReturn {
       console.error('Failed to add comment:', error)
       throw error
     }
+  }, [selectedRevision])
+
+  const setLocalStatus = (id: string, status: Comment['status']): void => {
+    setComments(prev => prev.map(c => c.id === id ? { ...c, status } : c))
+  }
+
+  const resolveComment = useCallback(async (id: string) => {
+    const response = await fetch(`/api/review/comment/${id}/resolve`, { method: 'POST' })
+    if (!response.ok) {
+      throw new Error('Failed to resolve comment')
+    }
+    setLocalStatus(id, 'resolved')
+  }, [])
+
+  const reopenComment = useCallback(async (id: string) => {
+    const response = await fetch(`/api/review/comment/${id}/reopen`, { method: 'POST' })
+    if (!response.ok) {
+      throw new Error('Failed to reopen comment')
+    }
+    setLocalStatus(id, 'open')
   }, [])
 
   const deleteComment = useCallback(async (id: string) => {
@@ -116,6 +153,8 @@ export function useComments(currentDirectory?: string): UseCommentsReturn {
     comments,
     addComment,
     deleteComment,
+    resolveComment,
+    reopenComment,
     getCommentsForLine,
     getCommentRangeLines,
     formatCommentsForExport
