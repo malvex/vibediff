@@ -19,3 +19,4 @@ Thumbs.db
 
 # React build output
 web/dist/
+.task/
