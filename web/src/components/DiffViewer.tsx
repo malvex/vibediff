@@ -21,7 +21,7 @@ export default function DiffViewer({ className = '' }: DiffViewerProps): React.R
   const [selectedFile, setSelectedFile] = useState<FileDiffType | null>(null)
   const [displayMode, setDisplayMode] = useState<'single' | 'all'>('single')
   const [collapsedFiles, setCollapsedFiles] = useState<Set<string>>(new Set())
-  const [commentDialog, setCommentDialog] = useState<{ file: string; line: number } | null>(null)
+  const [commentDialog, setCommentDialog] = useState<{ file: string; line: number; lineEnd: number } | null>(null)
   const [fullFileModal, setFullFileModal] = useState<string | null>(null)
   const [fileViewMode, setFileViewMode] = useState<'list' | 'tree'>('list')
   const [collapsedFolders, setCollapsedFolders] = useState<Set<string>>(new Set())
@@ -29,7 +29,7 @@ export default function DiffViewer({ className = '' }: DiffViewerProps): React.R
   const [isRefreshing, setIsRefreshing] = useState(false)
 
   const { data, loading, error, refetch } = useDiff(diffType)
-  const { addComment, deleteComment, getCommentsForLine } = useComments()
+  const { addComment, deleteComment, getCommentsForLine, getCommentRangeLines } = useComments()
   const { lastUpdate } = useWebSocketUpdates()
 
   // Refetch when WebSocket triggers an update
@@ -327,9 +327,10 @@ export default function DiffViewer({ className = '' }: DiffViewerProps): React.R
                 viewMode={viewMode}
                 collapsed={collapsedFiles.has(file.path)}
                 onToggleCollapse={() => { toggleFileCollapse(file.path); }}
-                onAddComment={(line) => { setCommentDialog({ file: file.path, line }); }}
+                onAddComment={(line, lineEnd) => { setCommentDialog({ file: file.path, line, lineEnd }); }}
                 onViewFullFile={() => { setFullFileModal(file.path); }}
                 getCommentsForLine={getCommentsForLine}
+                getCommentRangeLines={getCommentRangeLines}
                 onDeleteComment={deleteComment}
                 wrapLines={wrapLines}
               />
@@ -345,9 +346,10 @@ export default function DiffViewer({ className = '' }: DiffViewerProps): React.R
               viewMode={viewMode}
               collapsed={false}
               onToggleCollapse={() => { /* Single file view doesn't collapse */ }}
-              onAddComment={(line) => { setCommentDialog({ file: selectedFile.path, line }); }}
+              onAddComment={(line, lineEnd) => { setCommentDialog({ file: selectedFile.path, line, lineEnd }); }}
               onViewFullFile={() => { setFullFileModal(selectedFile.path); }}
               getCommentsForLine={getCommentsForLine}
+              getCommentRangeLines={getCommentRangeLines}
               onDeleteComment={deleteComment}
               wrapLines={wrapLines}
             />
@@ -367,9 +369,10 @@ export default function DiffViewer({ className = '' }: DiffViewerProps): React.R
         isOpen={!!commentDialog}
         file={commentDialog?.file ?? ''}
         line={commentDialog?.line ?? 0}
+        lineEnd={commentDialog?.lineEnd ?? 0}
         onSubmit={(content) => {
           if (commentDialog) {
-            void addComment(commentDialog.file, commentDialog.line, content).then(() => {
+            void addComment(commentDialog.file, commentDialog.line, content, commentDialog.lineEnd).then(() => {
               setCommentDialog(null)
             }).catch((err: unknown) => {
               console.error('Failed to add comment:', err)
@@ -386,9 +389,10 @@ export default function DiffViewer({ className = '' }: DiffViewerProps): React.R
         onClose={() => { setFullFileModal(null); }}
         viewMode={viewMode}
         getCommentsForLine={getCommentsForLine}
+        getCommentRangeLines={getCommentRangeLines}
         onDeleteComment={deleteComment}
-        onAddComment={(file, line, content) => {
-          void addComment(file, line, content).catch((err: unknown) => {
+        onAddComment={(file, line, content, lineEnd) => {
+          void addComment(file, line, content, lineEnd).catch((err: unknown) => {
             console.error('Failed to add comment:', err)
           })
         }}

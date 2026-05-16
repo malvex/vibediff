@@ -42,7 +42,7 @@ func (p *diffParser) parseFile() *FileDiff {
 	}
 
 	diffLine := p.lines[p.current]
-	paths := regexp.MustCompile(`diff --git a/(.*) b/(.*)`).FindStringSubmatch(diffLine)
+	paths := regexp.MustCompile(`diff --git [a-z]/(.*) [a-z]/(.*)`).FindStringSubmatch(diffLine)
 	if len(paths) >= 3 {
 		file.OldPath = paths[1]
 		file.Path = paths[2]

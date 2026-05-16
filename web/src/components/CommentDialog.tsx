@@ -4,11 +4,12 @@ interface CommentDialogProps {
   isOpen: boolean
   file: string
   line: number
+  lineEnd: number
   onSubmit: (content: string) => void
   onClose: () => void
 }
 
-export default function CommentDialog({ isOpen, file, line, onSubmit, onClose }: CommentDialogProps): React.ReactElement | null {
+export default function CommentDialog({ isOpen, file, line, lineEnd, onSubmit, onClose }: CommentDialogProps): React.ReactElement | null {
   const [content, setContent] = useState('')
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
@@ -45,7 +46,7 @@ export default function CommentDialog({ isOpen, file, line, onSubmit, onClose }:
       >
         <form onSubmit={handleSubmit} className="p-4">
           <h3 className="text-base font-semibold text-[#24292e] dark:text-[#c9d1d9] mb-2">
-            Add Comment - {file}:{Math.abs(line)}
+            Add Comment - {file}:{String(Math.abs(line))}{lineEnd !== line ? `-${String(Math.abs(lineEnd))}` : ''}
           </h3>
 
           <textarea
