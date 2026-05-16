@@ -29,9 +29,21 @@ tasks:
     env:
       CGO_ENABLED: 0
 
+  deps-web:
+    desc: Install npm dependencies if missing
+    dir: web
+    sources:
+      - package.json
+      - package-lock.json
+    generates:
+      - node_modules/.package-lock.json
+    cmds:
+      - npm install
+
   build-web:
     desc: Build the React web application
     dir: web
+    deps: [deps-web]
     cmds:
       - npm run build
 
